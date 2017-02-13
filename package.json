@@ -1,0 +1,24 @@
+{
+  "name": "get-vs7-path",
+  "version": "1.0.0",
+  "description": "Try to find the VS7 buildtools path via COM or registry",
+  "main": "index.js",
+  "os": ["win32"],
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "test.cmd"
+  },
+  "repository": "node4good/get-vs7-path",
+  "keywords": [
+    "Visual Studio 2017",
+    "COM-Serogate",
+    "powershell"
+  ],
+  "author": "Refael Ackermann <me@refack.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/node4good/get-vs7-path/issues"
+  },
+  "homepage": "https://github.com/node4good/get-vs7-path#readme"
+}
