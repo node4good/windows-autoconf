@@ -175,36 +175,27 @@ namespace VisualStudioConfiguration
     {
     }
 
-    public static class Program
+    public static class Main
     {
-        public static int Main(string[] args)
+        public static void Query()
         {
-            try
-            {
-                ISetupConfiguration query = new SetupConfiguration();
-                ISetupConfiguration2 query2 = (ISetupConfiguration2) query;
-                IEnumSetupInstances e = query2.EnumAllInstances();
-                ISetupInstance2[] rgelt = new ISetupInstance2[1];
-                int pceltFetched;
-                do
-                {
-                    e.Next(1, rgelt, out pceltFetched);
-                    if (pceltFetched > 0)
-                        PrintInstance(rgelt[0]);
-                } while (pceltFetched > 0);
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("Error 0x{0:x8}: {1}", ex, ex.Message);
-                return 1;
-            }
+			ISetupConfiguration query = new SetupConfiguration();
+			ISetupConfiguration2 query2 = (ISetupConfiguration2) query;
+			IEnumSetupInstances e = query2.EnumAllInstances();
+			ISetupInstance2[] rgelt = new ISetupInstance2[1];
+			int pceltFetched;
+			do
+			{
+				e.Next(1, rgelt, out pceltFetched);
+				if (pceltFetched > 0)
+					PrintInstance(rgelt[0]);
+			} while (pceltFetched > 0);
         }
 
         private static void PrintInstance(ISetupInstance2 setupInstance2)
         {
-            Console.WriteLine("InstallationPath: {0}", setupInstance2.GetInstallationPath());
-            Console.WriteLine("Product: {0}", setupInstance2.GetProduct().GetId());
+            Console.Write(String.Format("InstallationPath: {0}\n", setupInstance2.GetInstallationPath()));
+            Console.Write(String.Format("Product: {0}\n", setupInstance2.GetProduct().GetId()));
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
                 if (package.GetType() != "Exe") continue;
@@ -215,9 +206,8 @@ namespace VisualStudioConfiguration
                 string sdkVer = parts[1];
                 char[] chars = {'1', '0', '8'};
                 if (sdkVer.IndexOfAny(chars) == -1) continue;
-                Console.WriteLine("SDK: {0}", sdkVer);
+                Console.Write(String.Format("SDK: {0}\n", sdkVer));
             }
-            Console.WriteLine();
         }
     }
 }
