@@ -1,9 +1,11 @@
 {
   "name": "get-vs2017-path",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Try to find the VS2017 buildtools path via COM or registry",
   "main": "index.js",
-  "os": ["win32"],
+  "os": [
+    "win32"
+  ],
   "dependencies": {},
   "devDependencies": {},
   "scripts": {
