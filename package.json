@@ -9,7 +9,7 @@
   "dependencies": {},
   "devDependencies": {},
   "scripts": {
-    "test": "test.cmd"
+    "test": "mocha test"
   },
   "repository": "node4good/get-vs2017-path",
   "keywords": [
