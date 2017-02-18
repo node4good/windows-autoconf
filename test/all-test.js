@@ -14,6 +14,7 @@ describe('Try cmd tools', () => {
     assert(ret.includes('SDK'))
     assert(ret.includes('CmdPath'))
     assert(ret.includes('\\Common7\\'))
+    assert(ret.match(/VsDevCmd\.bat\s/i))
   })
 
   it('Compile and run', () => {
@@ -22,6 +23,7 @@ describe('Try cmd tools', () => {
     assert(ret.includes('SDK'))
     assert(ret.includes('CmdPath'))
     assert(ret.includes('\\Common7\\'))
+    assert(ret.match(/VsDevCmd\.bat\s/i))
   })
 
   it('Registry', () => {
@@ -29,6 +31,7 @@ describe('Try cmd tools', () => {
     assert(ret.includes('InstallationPath'))
     assert(ret.includes('CmdPath'))
     assert(ret.includes('\\Common7\\'))
+    assert(ret.match(/VsDevCmd\.bat\s/i))
   })
 
 })
@@ -40,7 +43,9 @@ describe('Try node wrapper', () => {
     const parts = ret.split('\\')
     assert(parts.length >= 4)
     assert(parts.includes('Common7'))
-    assert(ret.includes('VsDevCmd.bat'))
+    assert(ret.match(/VsDevCmd\.bat\s/i))
+    const cmdPath = ret.split(' -arch')[0]
+    assert(fs.existsSync(cmdPath))
   })
 
   it('getVS2017Setup', () => {
@@ -50,13 +55,16 @@ describe('Try node wrapper', () => {
     assert(parts.length >= 4)
     assert(parts.includes('BuildTools'))
     assert(vsSetup.CmdPath)
+    assert(vsSetup.CmdPath.match(/VsDevCmd\.bat$/i))
+    assert(fs.existsSync(vsSetup.InstallationPath))
+    assert(fs.existsSync(vsSetup.CmdPath))
   })
 
   it('locateMsbuild', () => {
     const path = getter.locateMsbuild()
     const parts = path.split('\\')
     assert(parts.length >= 4)
-    assert(path.includes('\\MSBuild.exe'))
+    assert(path.match(/MSBuild\.exe$/i))
     assert(fs.existsSync(path))
   })
 
