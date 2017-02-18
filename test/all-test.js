@@ -69,3 +69,32 @@ describe('Try node wrapper', () => {
   })
 
 })
+
+describe('genEnvironment', function () {
+  this.timeout(20000);
+  it('resolve for x64', () => {
+    const env = getter.resolveDevEnvironment('x64');
+    assert(env, 'didn\'t get ENVIRONMENT :(');
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'));
+    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(');
+    if (COMNTOOLS === 'VS150COMNTOOLS') {
+      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64');
+      assert.equal(env['VisualStudioVersion'], '15.0');
+      assert(env['__VSCMD_PREINIT_PATH'],
+        'Last env var should be __VSCMD_PREINIT_PATH');
+    }
+  });
+
+  it('resolve for x86', () => {
+    const env = getter.resolveDevEnvironment('x86');
+    assert(env, 'didn\'t get ENVIRONMENT :(');
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'));
+    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(');
+    if (COMNTOOLS === 'VS150COMNTOOLS') {
+      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86');
+      assert.equal(env['VisualStudioVersion'], '15.0');
+      assert(env['__VSCMD_PREINIT_PATH'],
+        'Last env var should be __VSCMD_PREINIT_PATH');
+    }
+  });
+});
