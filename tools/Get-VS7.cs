@@ -208,7 +208,7 @@ namespace VisualStudioConfiguration
                 if (sdkVer.IndexOfAny(chars) == -1) continue;
                 Console.Write(String.Format("SDK: {0}\n", sdkVer));
             }
-            String cmd = setupInstance2.GetInstallationPath() + "Common7\\Tools\\VsDevCmd.bat'";
+            String cmd = setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat'";
             Console.Write(String.Format("CmdPath: {0}\n", cmd));
         }
     }
