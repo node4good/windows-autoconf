@@ -6,31 +6,41 @@
  * @property {String} CmdPath
  */
 
-
 const try_powershell_path = __dirname + '\\tools\\try_powershell.cmd'
 const compile_run_path = __dirname + '\\tools\\compile-run.cmd'
 const try_registry_path = __dirname + '\\tools\\try_registry.cmd'
-
 const lazy = {
+  _patched: false,
   _bindings: null,
   get bindings () {
     if (!this._bindings) {
       this._bindings = {
+        fs: require('fs'),
         path: require('path'),
         log: console.log.bind(console),
         error: console.error.bind(console),
-        execSync: require('child_process').execSync
+        execSync: require('child_process').execSync,
+        process: process
+      }
+    }
+    const IS_DEBUG = (this._bindings.process.env['DEBUG'] || '').split(',').includes('autoconf')
+    if (IS_DEBUG && !this._patched) {
+      this._patched = true
+      this._bindings._execSync = this._bindings.execSync
+      this._bindings.execSync = (cmd, options) => {
+        this._bindings.log(`==== CMD ====\n${cmd}\n=============`)
+        const ret = this._bindings._execSync(cmd, options)
+        this._bindings.log(`${ret}\n=============`)
+        return ret
       }
     }
     return this._bindings
   },
 }
 
-
 function setBindings (bindings) {
-  lazy._bindings = bindings;
+  lazy._bindings = bindings
 }
-
 
 function parseCmdOutput (str) {
   return str
@@ -43,8 +53,7 @@ function parseCmdOutput (str) {
     }, {})
 }
 
-function
-tryVS7_powershell () {
+function tryVS7_powershell () {
   try {
     const vsSetupRaw = lazy.bindings.execSync(try_powershell_path).toString()
     if (!vsSetupRaw) return
@@ -76,7 +85,6 @@ function tryVS7_registry () {
   return vsSetup
 }
 
-
 function getVS2017Setup () {
   const vsSetup = tryVS7_powershell() || tryVS7_CSC() || tryVS7_registry()
   if (!vsSetup) {
@@ -85,131 +93,113 @@ function getVS2017Setup () {
   return vsSetup
 }
 
-function getVS2017Path (hostBits, target_arch) {
-  const vsSetup = getVS2017Setup()
+function formatFull2017Cmd (vsSetup, hostBits, target_arch) {
   const argArch = target_arch === 'x64' ? 'amd64' : 'x86'
   const argHost = hostBits === 64 ? 'amd64' : 'x86'
   return `${vsSetup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
 }
 
+function getVS2017Path (hostBits, target_arch) {
+  const vsSetup = getVS2017Setup()
+  return formatFull2017Cmd(vsSetup, hostBits, target_arch)
+}
 
 function locateMsbuild () {
   const vsSetup = getVS2017Setup()
-  const msbuild_location = lazy.bindings.path.join(vsSetup.InstallationPath, 'MSBuild',
-    '15.0', 'Bin', 'MSBuild.exe')
-  return msbuild_location;
+  const msbuild_location = lazy.bindings.path.join(
+    vsSetup.InstallationPath, 'MSBuild', '15.0', 'Bin', 'MSBuild.exe'
+  )
+  return msbuild_location
+}
+
+function getMSVSSetup (version) {
+  const env = lazy.bindings.process.env
+  if (!version)
+    version = env['GYP_MSVS_VERSION'] || 'auto'
+
+  let setup = getVS2017Setup()
+  if (version === '2017' || (version === 'auto' && setup && setup.InstallationPath)) {
+    setup.version = '2017'
+  } else if (version === 'auto' && env['VS140COMNTOOLS'] || version === '2015') {
+    setup = {version: '2015', CommonTools: env['VS140COMNTOOLS']}
+  } else if (version === 'auto' && env['VS120COMNTOOLS'] || version === '2013') {
+    setup = {version: '2013', CommonTools: env['VS120COMNTOOLS']}
+  } else if (version === 'auto' && env['VS100COMNTOOLS'] || version === '2010') {
+    setup = {version: '2010', CommonTools: env['VS100COMNTOOLS']}
+  } else {
+    setup = {version, InstallationPath: ''}
+  }
+  if (setup.CommonTools) {
+    setup.InstallationPath = lazy.bindings.path.join(setup.CommonTools, '..', '..')
+  }
+
+  return setup
 }
 
 function getMSVSVersion (version) {
-  const env = process.env;
-
-  if (!version)
-    version = env['GYP_MSVS_VERSION'] || 'auto';
-
-  // Try to find a MSVS installation
-  if (version === 'auto' && env['VS140COMNTOOLS'] || version === '2015')
-    return '2015';
-  if (version === 'auto' && env['VS120COMNTOOLS'] || version === '2013')
-    return '2013';
-  if (version === 'auto' && env['VS100COMNTOOLS'] || version === '2010')
-    return '2010';
-  if (version === '2010' || version === 'auto' && getVS2017Setup().InstallationPath)
-    return '2017'
-
-  return 'auto';
+  return getMSVSSetup(version).version
 }
 
-
 function getOSBits () {
-  const env = process.env;
+  const env = lazy.bindings.process.env
 
   // PROCESSOR_ARCHITEW6432 - is a system arch
   // PROCESSOR_ARCHITECTURE - is a session arch
-  const hostArch = env['PROCESSOR_ARCHITEW6432'] ||
-    env['PROCESSOR_ARCHITECTURE'];
+  const hostArch = env['PROCESSOR_ARCHITEW6432'] || env['PROCESSOR_ARCHITECTURE']
   if (hostArch === 'AMD64')
-    return 64;
+    return 64
   else
-    return 32;
+    return 32
 }
 
-
 function findOldVcVarsFile (hostBits, target_arch) {
-  // NOTE: Largely inspired by MSVSVersion.py
-  const env = process.env;
-  let version = getMSVSVersion();
+  // NOTE: Largely inspired by `GYP`::MSVSVersion.py
+  let setup = getMSVSSetup()
+  if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
 
-  let tools;
-  // Try to find a MSVS installation
-  if (version === 'auto' && env['VS140COMNTOOLS'] || version === '2015') {
-    version = '2015';
-    tools = lazy.bindings.path.join(env.VS140COMNTOOLS, '..', '..');
-  }
-  if (version === 'auto' && env['VS120COMNTOOLS'] || version === '2013') {
-    version = '2013';
-    tools = lazy.bindings.path.join(env.VS120COMNTOOLS, '..', '..');
-  }
-  // TODO(indutny): more versions?
-  if (version === 'auto' && env['VS100COMNTOOLS'] || version === '2010') {
-    version = '2010';
-    tools = lazy.bindings.path.join(env.VS120COMNTOOLS, '..', '..');
-  }
-  // TODO(indutny): does it work with MSVS Express?
-
-  if (version === 'auto') {
-    throw new Error('No Visual Studio found. When building - please ' +
-      'run `ninja` from the MSVS console');
+  if (setup.version === '2017') {
+    return formatFull2017Cmd(setup, hostBits, target_arch)
   }
 
-  let vcEnvCmd;
-  // TODO(indutny): proper escape for the .bat file
+  let cmdPathParts
+  let arg
   if (target_arch === 'ia32') {
-    if (hostBits === 64)
-      vcEnvCmd = '"' + lazy.bindings.path.join(tools, 'VC', 'vcvarsall.bat') + '" amd64_x86';
-    else
-      vcEnvCmd = '"'
-        + lazy.bindings.path.join(tools, 'Common7', 'Tools', 'vsvars32.bat')
-        + '"';
+    if (hostBits === 64) {
+      cmdPathParts = ['VC', 'vcvarsall.bat']
+      arg = 'amd64_x86'
+    } else {
+      cmdPathParts = ['Common7', 'Tools', 'vsvars32.bat']
+      arg = ''
+    }
   } else if (target_arch === 'x64') {
-    let arg;
-    if (hostBits === 64)
-      arg = 'amd64';
-    else
-      arg = 'x86_amd64';
-    vcEnvCmd = '"' + lazy.bindings.path.join(tools, 'VC', 'vcvarsall.bat') + '" ' + arg;
+    cmdPathParts = ['VC', 'vcvarsall.bat']
+    arg = hostBits === 64 ? 'amd64' : 'x86_amd64'
   } else {
-    throw new Error(`Arch: '${target_arch}' is not supported on windows`);
+    throw new Error(`Arch: '${target_arch}' is not supported on windows`)
   }
-  return vcEnvCmd;
+  return `"${lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)}" ${arg}`
 }
 
 function resolveDevEnvironment (target_arch) {
-  const hostBits = getOSBits();
-
-  const vcEnvCmd = getVS2017Path(hostBits, target_arch) ||
-    findOldVcVarsFile(hostBits, target_arch);
-  let lines = [];
+  const hostBits = getOSBits()
+  const vcEnvCmd = findOldVcVarsFile(hostBits, target_arch)
+  let lines = []
   try {
-    const pre = lazy.bindings.execSync('set').toString()
-      .trim().split(/\r\n/g);
-    const preSet = new Set(pre);
-    const rawLines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}})
-      .toString()
-      .trim()
-      .split(/\r\n/g);
-    lines = rawLines.filter(l => !preSet.has(l));
+    const pre = lazy.bindings.execSync('set').toString().trim().split(/\r\n/g)
+    const preSet = new Set(pre)
+    const rawLines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
+    lines = rawLines.filter(l => !preSet.has(l))
   } catch (e) {
-    lazy.bindings.error(e.message);
+    lazy.bindings.error(e.message)
   }
   const env = lines.reduce((s, l) => {
-    const kv = l.split('=');
-    s[kv[0]] = kv[1];
-    return s;
-  }, {});
+    const kv = l.split('=')
+    s[kv[0]] = kv[1]
+    return s
+  }, {})
 
-  return env;
+  return env
 }
-
 
 module.exports = {
   try_powershell_path,

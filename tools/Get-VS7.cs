@@ -177,7 +177,7 @@ namespace VisualStudioConfiguration
 
     public static class Main
     {
-        public static void Query()
+        public static void Query(bool all = false)
         {
 			ISetupConfiguration query = new SetupConfiguration();
 			ISetupConfiguration2 query2 = (ISetupConfiguration2) query;
@@ -188,16 +188,21 @@ namespace VisualStudioConfiguration
 			{
 				e.Next(1, rgelt, out pceltFetched);
 				if (pceltFetched > 0)
-					PrintInstance(rgelt[0]);
+					PrintInstance(rgelt[0], all);
 			} while (pceltFetched > 0);
         }
 
-        private static void PrintInstance(ISetupInstance2 setupInstance2)
+        private static void PrintInstance(ISetupInstance2 setupInstance2, Boolean all)
         {
             Console.Write(String.Format("InstallationPath: {0}\n", setupInstance2.GetInstallationPath()));
+            Console.Write(String.Format("Version: {0}\n", setupInstance2.GetInstallationVersion()));
             Console.Write(String.Format("Product: {0}\n", setupInstance2.GetProduct().GetId()));
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
+                if (all) {
+                    Console.Write(String.Format("{0}\n", package.GetId()));
+                    continue;
+                }
                 if (package.GetType() != "Exe") continue;
                 string id = package.GetId();
                 if (id.IndexOf("SDK", StringComparison.Ordinal) == -1) continue;

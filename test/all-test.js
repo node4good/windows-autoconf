@@ -68,33 +68,52 @@ describe('Try node wrapper', () => {
     assert(fs.existsSync(path))
   })
 
+  it('getMSVSVersion', () => {
+    const version = getter.getMSVSVersion()
+    assert.equal(version, '2017')
+  })
+
+  it('getOSBits', () => {
+    const bits = getter.getOSBits()
+    assert.equal(bits, 64)
+  })
+
+  it('findOldVcVarsFile', () => {
+    const cmd = getter.findOldVcVarsFile()
+    const path = cmd.replace(/(\.\w\w\w)(\b.*|$)/, '$1')
+    const parts = path.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop().match(/vs/i))
+    assert(fs.existsSync(path))
+  })
+
 })
 
 describe('genEnvironment', function () {
-  this.timeout(20000);
+  this.timeout(20000)
   it('resolve for x64', () => {
-    const env = getter.resolveDevEnvironment('x64');
-    assert(env, 'didn\'t get ENVIRONMENT :(');
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'));
-    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(');
+    const env = getter.resolveDevEnvironment('x64')
+    assert(env, 'didn\'t get ENVIRONMENT :(')
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'))
+    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(')
     if (COMNTOOLS === 'VS150COMNTOOLS') {
-      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64');
-      assert.equal(env['VisualStudioVersion'], '15.0');
+      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
+      assert.equal(env['VisualStudioVersion'], '15.0')
       assert(env['__VSCMD_PREINIT_PATH'],
-        'Last env var should be __VSCMD_PREINIT_PATH');
+        'Last env var should be __VSCMD_PREINIT_PATH')
     }
-  });
+  })
 
   it('resolve for x86', () => {
-    const env = getter.resolveDevEnvironment('x86');
-    assert(env, 'didn\'t get ENVIRONMENT :(');
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'));
-    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(');
+    const env = getter.resolveDevEnvironment('x86')
+    assert(env, 'didn\'t get ENVIRONMENT :(')
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'))
+    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(')
     if (COMNTOOLS === 'VS150COMNTOOLS') {
-      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86');
-      assert.equal(env['VisualStudioVersion'], '15.0');
+      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86')
+      assert.equal(env['VisualStudioVersion'], '15.0')
       assert(env['__VSCMD_PREINIT_PATH'],
-        'Last env var should be __VSCMD_PREINIT_PATH');
+        'Last env var should be __VSCMD_PREINIT_PATH')
     }
-  });
-});
+  })
+})
