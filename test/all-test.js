@@ -6,32 +6,38 @@ const assert = require('assert')
 const execSync = require('child_process').execSync
 const getter = require('../')
 
+const prods = new Set(['BuildTools', 'Enterprise', 'Professional', 'Community'])
+
 describe('Try cmd tools', () => {
 
   it('Powershell', () => {
     const ret = execSync(getter.try_powershell_path).toString()
-    assert(ret.includes('InstallationPath'))
-    assert(ret.includes('SDK'))
-    assert(ret.includes('CmdPath'))
-    assert(ret.includes('\\Common7\\'))
-    assert(ret.match(/VsDevCmd\.bat\s/i))
+    const setup = JSON.parse(ret)[0];
+    assert(setup.Product)
+    assert(setup.InstallationPath)
+    assert(setup.Version)
+    assert(setup.SDK)
+    assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
   })
 
   it('Compile and run', () => {
     const ret = execSync(getter.compile_run_path).toString()
-    assert(ret.includes('InstallationPath'))
-    assert(ret.includes('SDK'))
-    assert(ret.includes('CmdPath'))
-    assert(ret.includes('\\Common7\\'))
-    assert(ret.match(/VsDevCmd\.bat\s/i))
+    const setup = JSON.parse(ret)[0];
+    assert(setup.Product)
+    assert(setup.InstallationPath)
+    assert(setup.Version)
+    assert(setup.SDK)
+    assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
   })
 
   it('Registry', () => {
     const ret = execSync(getter.try_registry_path).toString()
-    assert(ret.includes('InstallationPath'))
-    assert(ret.includes('CmdPath'))
-    assert(ret.includes('\\Common7\\'))
-    assert(ret.match(/VsDevCmd\.bat\s/i))
+    const setup = JSON.parse(ret)[0];
+    assert(setup.RegistryVersion)
+    assert(setup.InstallationPath)
+    assert(setup.CmdPath)
   })
 
 })
@@ -53,9 +59,9 @@ describe('Try node wrapper', () => {
     assert(vsSetup.InstallationPath)
     const parts = vsSetup.InstallationPath.split('\\')
     assert(parts.length >= 4)
-    assert(parts.includes('BuildTools'))
+    assert(prods.has(parts.pop()))
     assert(vsSetup.CmdPath)
-    assert(vsSetup.CmdPath.match(/VsDevCmd\.bat$/i))
+    assert(vsSetup.CmdPath.match(/\.bat$/i))
     assert(fs.existsSync(vsSetup.InstallationPath))
     assert(fs.existsSync(vsSetup.CmdPath))
   })

@@ -184,23 +184,32 @@ namespace VisualStudioConfiguration
 			IEnumSetupInstances e = query2.EnumAllInstances();
 			ISetupInstance2[] rgelt = new ISetupInstance2[1];
 			int pceltFetched;
-			do
+            Console.Write("[");
+            e.Next(1, rgelt, out pceltFetched);
+			while (pceltFetched > 0)
 			{
-				e.Next(1, rgelt, out pceltFetched);
+                PrintInstance(rgelt[0], all);
+                e.Next(1, rgelt, out pceltFetched);
 				if (pceltFetched > 0)
-					PrintInstance(rgelt[0], all);
-			} while (pceltFetched > 0);
+				    Console.Write(",");
+			}
+            Console.Write("]");
         }
 
         private static void PrintInstance(ISetupInstance2 setupInstance2, Boolean all)
         {
-            Console.Write(String.Format("InstallationPath: {0}\n", setupInstance2.GetInstallationPath()));
-            Console.Write(String.Format("Version: {0}\n", setupInstance2.GetInstallationVersion()));
-            Console.Write(String.Format("Product: {0}\n", setupInstance2.GetProduct().GetId()));
+            Console.Write("{\n");
+            string[] prodParts = setupInstance2.GetProduct().GetId().Split('.');
+            Array.Reverse(prodParts);
+            string prod = prodParts[0];
+            string instPath = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
+            Console.Write(String.Format("\"Product\": \"{0}\",\n", prod));
+            Console.Write(String.Format("\"InstallationPath\": \"{0}\",\n", instPath));
+            Console.Write(String.Format("\"Version\": \"{0}\",\n", setupInstance2.GetInstallationVersion()));
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
                 if (all) {
-                    Console.Write(String.Format("{0}\n", package.GetId()));
+                    Console.Write(String.Format("\"{0}\": true,\n", package.GetId()));
                     continue;
                 }
                 if (package.GetType() != "Exe") continue;
@@ -211,10 +220,12 @@ namespace VisualStudioConfiguration
                 string sdkVer = parts[1];
                 char[] chars = {'1', '0', '8'};
                 if (sdkVer.IndexOfAny(chars) == -1) continue;
-                Console.Write(String.Format("SDK: {0}\n", sdkVer));
+                Console.Write(String.Format("\"SDK\": \"{0}\",\n", sdkVer));
             }
-            String cmd = setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat";
-            Console.Write(String.Format("CmdPath: {0}\n", cmd));
+            String cmd = (setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat");
+            cmd = cmd.Replace("\\", "\\\\");
+            Console.Write(String.Format("\"CmdPath\": \"{0}\"\n", cmd));
+            Console.Write("}");
         }
     }
 

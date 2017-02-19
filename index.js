@@ -1,9 +1,12 @@
 'use strict'
 /**
  * @namespace vsSetup
+ * @property {String} Product
  * @property {String} InstallationPath
  * @property {String} SDK
  * @property {String} CmdPath
+ * @property {String} Version
+ * @property {String} RegistryVersion
  */
 
 const try_powershell_path = __dirname + '\\tools\\try_powershell.cmd'
@@ -42,22 +45,11 @@ function setBindings (bindings) {
   lazy._bindings = bindings
 }
 
-function parseCmdOutput (str) {
-  return str
-    .trim()
-    .split(/[\r|\n]/g)
-    .reduce((s, l) => {
-      const lParts = l.split(': ')
-      if (lParts.length > 1) s[lParts[0]] = lParts[1]
-      return s
-    }, {})
-}
-
 function tryVS7_powershell () {
   try {
     const vsSetupRaw = lazy.bindings.execSync(try_powershell_path).toString()
     if (!vsSetupRaw) return
-    const vsSetup = parseCmdOutput(vsSetupRaw)
+    const vsSetup = JSON.parse(vsSetupRaw)[0]
     return vsSetup
   } catch (e) {
     lazy.bindings.log('Couldn\'t find VS7 with powershell', e.message)
@@ -68,7 +60,7 @@ function tryVS7_CSC () {
   try {
     const vsSetupRaw = lazy.bindings.execSync(compile_run_path).toString()
     if (!vsSetupRaw) return
-    const vsSetup = parseCmdOutput(vsSetupRaw)
+    const vsSetup = JSON.parse(vsSetupRaw)[0]
     return vsSetup
   } catch (e) {
     lazy.bindings.log('Couldn\'t find VS7 with a compiled exe', e.message)
@@ -81,7 +73,7 @@ function tryVS7_registry () {
     lazy.bindings.log('Couldn\'t find VS7 in registry:(')
     return
   }
-  const vsSetup = parseCmdOutput(vsSetupRaw)
+  const vsSetup = JSON.parse(vsSetupRaw)[0]
   return vsSetup
 }
 
