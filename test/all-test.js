@@ -34,10 +34,11 @@ describe('Try cmd tools', () => {
 
   it('Registry', () => {
     const ret = execSync(getter.try_registry_path).toString()
-    const setup = JSON.parse(ret)[0];
+    const setup = JSON.parse(ret).find(s => s.RegistryVersion === "15.0");
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
   })
 
 })
