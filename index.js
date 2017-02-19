@@ -85,17 +85,6 @@ function getVS2017Setup () {
   return vsSetup
 }
 
-function formatFull2017Cmd (vsSetup, hostBits, target_arch) {
-  const argArch = target_arch === 'x64' ? 'amd64' : 'x86'
-  const argHost = hostBits === 64 ? 'amd64' : 'x86'
-  return `${vsSetup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
-}
-
-function getVS2017Path (hostBits, target_arch) {
-  const vsSetup = getVS2017Setup()
-  return formatFull2017Cmd(vsSetup, hostBits, target_arch)
-}
-
 function locateMsbuild () {
   const vsSetup = getVS2017Setup()
   const msbuild_location = lazy.bindings.path.join(
@@ -128,10 +117,6 @@ function getMSVSSetup (version) {
   return setup
 }
 
-function getMSVSVersion (version) {
-  return getMSVSSetup(version).version
-}
-
 function getOSBits () {
   const env = lazy.bindings.process.env
 
@@ -144,13 +129,17 @@ function getOSBits () {
     return 32
 }
 
-function findOldVcVarsFile (hostBits, target_arch) {
-  // NOTE: Largely inspired by `GYP`::MSVSVersion.py
+function getWithFullCmd (target_arch) {
   let setup = getMSVSSetup()
-  if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
+  const hostBits = getOSBits()
 
+  if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
+  // NOTE: Largely inspired by `GYP`::MSVSVersion.py
   if (setup.version === '2017') {
-    return formatFull2017Cmd(setup, hostBits, target_arch)
+    const argArch = target_arch === 'x64' ? 'amd64' : 'x86'
+    const argHost = hostBits === 64 ? 'amd64' : 'x86'
+    setup.FullCmd = `${setup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
+    return setup
   }
 
   let cmdPathParts
@@ -169,12 +158,17 @@ function findOldVcVarsFile (hostBits, target_arch) {
   } else {
     throw new Error(`Arch: '${target_arch}' is not supported on windows`)
   }
-  return `"${lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)}" ${arg}`
+  setup.FullCmd = `"${lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)}" ${arg}`
 }
 
-function resolveDevEnvironment (target_arch) {
-  const hostBits = getOSBits()
-  const vcEnvCmd = findOldVcVarsFile(hostBits, target_arch)
+function findOldVcVarsFile (hostBits, target_arch) {
+  let setup = getWithFullCmd(target_arch)
+  if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
+  return setup.FullCmd
+}
+
+function resolveDevEnvironment_inner (setup) {
+  const vcEnvCmd = setup.FullCmd
   let lines = []
   try {
     const pre = lazy.bindings.execSync('set').toString().trim().split(/\r\n/g)
@@ -193,15 +187,30 @@ function resolveDevEnvironment (target_arch) {
   return env
 }
 
+function resolveDevEnvironment(target_arch) {
+  const setup = getWithFullCmd(target_arch)
+  const cacheName = `_${setup.FullCmd.replace(/\s|\\|\/|:|=/g, '')}${setup.Version}.cache`
+  if (lazy.bindings.fs.existsSync(cacheName)) {
+    const file = lazy.bindings.fs.readFileSync(cacheName);
+    const ret = JSON.parse(file);
+    return ret;
+  } else {
+    const env = resolveDevEnvironment_inner(setup)
+    const file = JSON.stringify(env);
+    lazy.bindings.fs.writeFileSync(cacheName, file);
+    return env;
+  }
+}
+
 module.exports = {
   try_powershell_path,
   compile_run_path,
   try_registry_path,
   setBindings,
   getVS2017Setup,
-  getVS2017Path,
+  getVS2017Path: findOldVcVarsFile,
   locateMsbuild,
-  getMSVSVersion,
+  getMSVSVersion: (version) => getMSVSSetup(version).version,
   getOSBits,
   findOldVcVarsFile,
   resolveDevEnvironment,
