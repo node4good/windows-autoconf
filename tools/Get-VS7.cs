@@ -222,7 +222,7 @@ namespace VisualStudioConfiguration
                 if (sdkVer.IndexOfAny(chars) == -1) continue;
                 Console.Write(String.Format("\"SDKFull\": \"{0}\",\n", sdkVer));
                 string[] sdkParts = sdkVer.Split('.');
-                sdkParts[sdkParts.Length - 1] = "000";
+                sdkParts[sdkParts.Length - 1] = "0";
                 Console.Write(String.Format("\"SDK\": \"{0}\",\n", String.Join(".", sdkParts)));
             }
             String cmd = (setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat");
