@@ -191,7 +191,8 @@ function resolveDevEnvironment_inner (setup) {
 
 function resolveDevEnvironment(target_arch) {
   const setup = getWithFullCmd(target_arch)
-  const cacheName = `_${setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')}${setup.Version}.json`
+  const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
+  const cacheName = lazy.bindings.path.join(__dirname, `_${cacheKey}${setup.Version}.json`)
   if (lazy.bindings.fs.existsSync(cacheName)) {
     const file = lazy.bindings.fs.readFileSync(cacheName);
     const ret = JSON.parse(file);
