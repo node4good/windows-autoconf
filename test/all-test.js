@@ -12,7 +12,7 @@ describe('Try cmd tools', () => {
 
   it('Powershell', () => {
     const ret = execSync(getter.try_powershell_path).toString()
-    const setup = JSON.parse(ret)[0];
+    const setup = JSON.parse(ret)[0]
     assert(setup.Product)
     assert(setup.InstallationPath)
     assert(setup.Version)
@@ -23,7 +23,7 @@ describe('Try cmd tools', () => {
 
   it('Compile and run', () => {
     const ret = execSync(getter.compile_run_path).toString()
-    const setup = JSON.parse(ret)[0];
+    const setup = JSON.parse(ret)[0]
     assert(setup.Product)
     assert(setup.InstallationPath)
     assert(setup.Version)
@@ -34,25 +34,38 @@ describe('Try cmd tools', () => {
 
   it('Registry', () => {
     const ret = execSync(getter.try_registry_path).toString()
-    const setup = JSON.parse(ret).find(s => s.RegistryVersion === "15.0");
+    const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
-    assert(fs.existsSync(setup.CmdPath))
   })
 
 })
 
+function extractFile (str) {
+  return str.replace(/(\.bat)("?\s.*|$)/, '$1').replace('"', '')
+}
+
 describe('Try node wrapper', () => {
 
-  it('getVS2017Path', () => {
-    const ret = getter.getVS2017Path(64, 'x64')
+  it('getVS2017Path x64', () => {
+    const ret = getter.getVS2017Path(null, 'x64')
     const parts = ret.split('\\')
     assert(parts.length >= 4)
-    assert(parts.includes('Common7'))
-    assert(ret.match(/VsDevCmd\.bat\s/i))
-    const cmdPath = ret.split(' -arch')[0]
-    assert(fs.existsSync(cmdPath))
+    assert(parts.includes('Common7') || parts.includes('VC'))
+    assert(ret.match(/\.bat/i))
+    const path = extractFile(ret)
+    assert(fs.existsSync(path))
+  })
+
+  it('getVS2017Path ia32', () => {
+    const ret = getter.getVS2017Path(null, 'ia32')
+    const parts = ret.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.includes('Common7') || parts.includes('VC'))
+    assert(ret.match(/\.bat/i))
+    const path = extractFile(ret)
+    assert(fs.existsSync(path))
   })
 
   it('getVS2017Setup', () => {
@@ -77,7 +90,7 @@ describe('Try node wrapper', () => {
 
   it('getMSVSVersion', () => {
     const version = getter.getMSVSVersion()
-    assert.equal(version, '2017')
+    assert.equal(version, process.env['GYP_MSVS_VERSION'] || '2017')
   })
 
   it('getOSBits', () => {
@@ -85,13 +98,40 @@ describe('Try node wrapper', () => {
     assert.equal(bits, 64)
   })
 
-  it('findOldVcVarsFile', () => {
-    const cmd = getter.findOldVcVarsFile()
-    const path = cmd.replace(/(\.\w\w\w)(\b.*|$)/, '$1')
+  it('findOldVcVarsFile x64', () => {
+    const cmd = getter.findOldVcVarsFile(null, 'x64')
+    const path = extractFile(cmd)
     const parts = path.split('\\')
     assert(parts.length >= 4)
-    assert(parts.pop().match(/vs/i))
+    assert(parts.pop().match(/vs|vars/i))
     assert(fs.existsSync(path))
+  })
+
+  it('findOldVcVarsFile ia32', () => {
+    const cmd = getter.findOldVcVarsFile(null, 'ia32')
+    const path = extractFile(cmd)
+    const parts = path.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop().match(/vs|vars/i))
+    assert(fs.existsSync(path))
+  })
+
+  it('getWithFullCmd ia32', () => {
+    const setup = getter._forTesting.getWithFullCmd('ia32')
+    const cmd = setup.CmdPath
+    const parts = cmd.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop().match(/vs|vars/i))
+    assert(fs.existsSync(cmd))
+  })
+
+  it('getWithFullCmd x64', () => {
+    const setup = getter._forTesting.getWithFullCmd('x64')
+    const cmd = setup.CmdPath
+    const parts = cmd.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop().match(/vs|vars/i))
+    assert(fs.existsSync(cmd))
   })
 
 })
@@ -101,26 +141,22 @@ describe('genEnvironment', function () {
   it('resolve for x64', () => {
     const env = getter.resolveDevEnvironment('x64')
     assert(env, 'didn\'t get ENVIRONMENT :(')
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'))
-    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(')
-    if (COMNTOOLS === 'VS150COMNTOOLS') {
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
+    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :(')
+    if (env['VisualStudioVersion'] === '15.0') {
       assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
-      assert.equal(env['VisualStudioVersion'], '15.0')
-      assert(env['__VSCMD_PREINIT_PATH'],
-        'Last env var should be __VSCMD_PREINIT_PATH')
+      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
     }
   })
 
   it('resolve for x86', () => {
-    const env = getter.resolveDevEnvironment('x86')
+    const env = getter.resolveDevEnvironment('ia32')
     assert(env, 'didn\'t get ENVIRONMENT :(')
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('COMNTOOLS'))
-    assert(COMNTOOLS, 'didn\'t get COMNTOOLS :(')
-    if (COMNTOOLS === 'VS150COMNTOOLS') {
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
+    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :(')
+    if (env['VisualStudioVersion'] === '15.0') {
       assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86')
-      assert.equal(env['VisualStudioVersion'], '15.0')
-      assert(env['__VSCMD_PREINIT_PATH'],
-        'Last env var should be __VSCMD_PREINIT_PATH')
+      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
     }
   })
 })

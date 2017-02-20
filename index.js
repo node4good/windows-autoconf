@@ -136,32 +136,34 @@ function getWithFullCmd (target_arch) {
   if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
   // NOTE: Largely inspired by `GYP`::MSVSVersion.py
   if (setup.version === '2017') {
-    const argArch = target_arch === 'x64' ? 'amd64' : 'x86'
+    const argArch = target_arch === 'x64' ? 'amd64' : target_arch === 'ia32' ? 'x86' : 'gaga'
+    if (argArch === 'gaga') throw new Error(`Arch: '${target_arch}' is not supported`)
     const argHost = hostBits === 64 ? 'amd64' : 'x86'
     setup.FullCmd = `${setup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
-    return setup
-  }
-
-  let cmdPathParts
-  let arg
-  if (target_arch === 'ia32') {
-    if (hostBits === 64) {
-      cmdPathParts = ['VC', 'vcvarsall.bat']
-      arg = 'amd64_x86'
-    } else {
-      cmdPathParts = ['Common7', 'Tools', 'vsvars32.bat']
-      arg = ''
-    }
-  } else if (target_arch === 'x64') {
-    cmdPathParts = ['VC', 'vcvarsall.bat']
-    arg = hostBits === 64 ? 'amd64' : 'x86_amd64'
   } else {
-    throw new Error(`Arch: '${target_arch}' is not supported on windows`)
+    let cmdPathParts
+    let arg
+    if (target_arch === 'ia32') {
+      if (hostBits === 64) {
+        cmdPathParts = ['VC', 'vcvarsall.bat']
+        arg = 'amd64_x86'
+      } else {
+        cmdPathParts = ['Common7', 'Tools', 'vsvars32.bat']
+        arg = ''
+      }
+    } else if (target_arch === 'x64') {
+      cmdPathParts = ['VC', 'vcvarsall.bat']
+      arg = hostBits === 64 ? 'amd64' : 'x86_amd64'
+    } else {
+      throw new Error(`Arch: '${target_arch}' is not supported`)
+    }
+    setup.CmdPath = lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)
+    setup.FullCmd = `"${setup.CmdPath}" ${arg}`
   }
-  setup.FullCmd = `"${lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)}" ${arg}`
+  return setup
 }
 
-function findOldVcVarsFile (hostBits, target_arch) {
+function findVcVarsFile (target_arch) {
   let setup = getWithFullCmd(target_arch)
   if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
   return setup.FullCmd
@@ -189,7 +191,7 @@ function resolveDevEnvironment_inner (setup) {
 
 function resolveDevEnvironment(target_arch) {
   const setup = getWithFullCmd(target_arch)
-  const cacheName = `_${setup.FullCmd.replace(/\s|\\|\/|:|=/g, '')}${setup.Version}.cache`
+  const cacheName = `_${setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')}${setup.Version}.json`
   if (lazy.bindings.fs.existsSync(cacheName)) {
     const file = lazy.bindings.fs.readFileSync(cacheName);
     const ret = JSON.parse(file);
@@ -208,11 +210,11 @@ module.exports = {
   try_registry_path,
   setBindings,
   getVS2017Setup,
-  getVS2017Path: findOldVcVarsFile,
+  getVS2017Path: (_, arch) => findVcVarsFile(arch),
   locateMsbuild,
   getMSVSVersion: (version) => getMSVSSetup(version).version,
   getOSBits,
-  findOldVcVarsFile,
+  findOldVcVarsFile : (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
-  _forTesting: {tryVS7_powershell, tryVS7_CSC, tryVS7_registry}
+  _forTesting: {tryVS7_powershell, tryVS7_CSC, tryVS7_registry, getWithFullCmd}
 }
