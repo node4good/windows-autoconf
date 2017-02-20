@@ -9,9 +9,9 @@
  * @property {String} RegistryVersion
  */
 
-const try_powershell_path = __dirname + '\\tools\\try_powershell.cmd'
-const compile_run_path = __dirname + '\\tools\\compile-run.cmd'
-const try_registry_path = __dirname + '\\tools\\try_registry.cmd'
+const try_powershell_path = `"${__dirname}\\tools\\try_powershell.cmd"`
+const compile_run_path = `"${__dirname}\\tools\\compile-run.cmd"`
+const try_registry_path = `"${__dirname}\\tools\\try_registry.cmd"`
 const lazy = {
   _patched: false,
   _bindings: null,
@@ -77,11 +77,14 @@ function tryVS7_registry () {
   return vsSetup
 }
 
+let cache2017;
 function getVS2017Setup () {
+  if (cache2017) return cache2017;
   const vsSetup = tryVS7_powershell() || tryVS7_CSC() || tryVS7_registry()
   if (!vsSetup) {
     throw new Error('Couldn\'t find VS7 :(')
   }
+  cache2017 = vsSetup;
   return vsSetup
 }
 
@@ -93,7 +96,9 @@ function locateMsbuild () {
   return msbuild_location
 }
 
+let msvs2017;
 function getMSVSSetup (version) {
+  if (msvs2017) return msvs2017;
   const env = lazy.bindings.process.env
   if (!version)
     version = env['GYP_MSVS_VERSION'] || 'auto'
@@ -113,7 +118,7 @@ function getMSVSSetup (version) {
   if (setup.CommonTools) {
     setup.InstallationPath = lazy.bindings.path.join(setup.CommonTools, '..', '..')
   }
-
+  msvs2017 = setup;
   return setup
 }
 

@@ -39,3 +39,4 @@ jspm_packages
 .idea
 *.exe
 /nuget_packs/
+/_*.json
