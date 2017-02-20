@@ -10,9 +10,6 @@
  * @property {String} RegistryVersion
  */
 
-const try_powershell_path = `"${__dirname}\\tools\\try_powershell.cmd"`
-const compile_run_path = `"${__dirname}\\tools\\compile-run.cmd"`
-const try_registry_path = `"${__dirname}\\tools\\try_registry.cmd"`
 const lazy = {
   _patched: false,
   _bindings: null,
@@ -48,7 +45,7 @@ function setBindings (bindings) {
 
 function tryVS7_powershell () {
   try {
-    const vsSetupRaw = lazy.bindings.execSync(try_powershell_path).toString()
+    const vsSetupRaw = lazy.bindings.execSync(module.exports.try_powershell_path).toString()
     if (!vsSetupRaw) return
     const vsSetup = JSON.parse(vsSetupRaw)[0]
     return vsSetup
@@ -59,7 +56,7 @@ function tryVS7_powershell () {
 
 function tryVS7_CSC () {
   try {
-    const vsSetupRaw = lazy.bindings.execSync(compile_run_path).toString()
+    const vsSetupRaw = lazy.bindings.execSync(module.exports.compile_run_path).toString()
     if (!vsSetupRaw) return
     const vsSetup = JSON.parse(vsSetupRaw)[0]
     return vsSetup
@@ -69,33 +66,33 @@ function tryVS7_CSC () {
 }
 
 function tryVS7_registry () {
-  const vsSetupRaw = lazy.bindings.execSync(try_registry_path).toString()
+  const vsSetupRaw = lazy.bindings.execSync(module.exports.try_registry_path).toString()
   if (vsSetupRaw.includes('ERROR')) {
     lazy.bindings.log('Couldn\'t find VS7 in registry:(')
     return
   }
   const vsSetups = JSON.parse(vsSetupRaw)
-  const max = vsSetups.reduce((s,i) => Math.max(s, Number(i.RegistryVersion)), 0)
+  const max = vsSetups.reduce((s, i) => Math.max(s, Number(i.RegistryVersion)), 0)
   const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === max)
   if (lazy.isDebug) lazy.bindings.log(vsSetup)
   if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
 
-  const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" & set`).toString().trim().split(/\r?\n/g);
+  const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" & set`).toString().trim().split(/\r?\n/g)
   vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
-  vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, "$1")
+  vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, '$1')
   vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
   vsSetup.Product = vsSetup.InstallationPath.split('\\').slice(-2, -1)[0]
   return vsSetup
 }
 
-let cache2017;
+let cache2017
 function getVS2017Setup () {
-  if (cache2017) return cache2017;
+  if (cache2017) return cache2017
   const vsSetup = tryVS7_powershell() || tryVS7_CSC() || tryVS7_registry()
   if (!vsSetup) {
     throw new Error('Couldn\'t find VS7 :(')
   }
-  cache2017 = vsSetup;
+  cache2017 = vsSetup
   return vsSetup
 }
 
@@ -107,9 +104,9 @@ function locateMsbuild () {
   return msbuild_location
 }
 
-let msvs2017;
+let msvs2017
 function getMSVSSetup (version) {
-  if (msvs2017) return msvs2017;
+  if (msvs2017) return msvs2017
   const env = lazy.bindings.process.env
   if (!version)
     version = env['GYP_MSVS_VERSION'] || 'auto'
@@ -129,7 +126,7 @@ function getMSVSSetup (version) {
   if (setup.CommonTools) {
     setup.InstallationPath = lazy.bindings.path.join(setup.CommonTools, '..', '..')
   }
-  msvs2017 = setup;
+  msvs2017 = setup
   return setup
 }
 
@@ -205,33 +202,33 @@ function resolveDevEnvironment_inner (setup) {
   return env
 }
 
-function resolveDevEnvironment(target_arch) {
+function resolveDevEnvironment (target_arch) {
   const setup = getWithFullCmd(target_arch)
   const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
   const cacheName = lazy.bindings.path.join(__dirname, `_${cacheKey}${setup.Version}.json`)
   if (lazy.bindings.fs.existsSync(cacheName)) {
-    const file = lazy.bindings.fs.readFileSync(cacheName);
-    const ret = JSON.parse(file);
-    return ret;
+    const file = lazy.bindings.fs.readFileSync(cacheName)
+    const ret = JSON.parse(file)
+    return ret
   } else {
     const env = resolveDevEnvironment_inner(setup)
-    const file = JSON.stringify(env);
-    lazy.bindings.fs.writeFileSync(cacheName, file);
-    return env;
+    const file = JSON.stringify(env)
+    lazy.bindings.fs.writeFileSync(cacheName, file)
+    return env
   }
 }
 
 module.exports = {
-  try_powershell_path,
-  compile_run_path,
-  try_registry_path,
+  try_powershell_path: `"${__dirname}\\tools\\try_powershell.cmd"`,
+  compile_run_path: `"${__dirname}\\tools\\compile-run.cmd"`,
+  try_registry_path: `"${__dirname}\\tools\\try_registry.cmd"`,
   setBindings,
   getVS2017Setup,
   getVS2017Path: (_, arch) => findVcVarsFile(arch),
   locateMsbuild,
   getMSVSVersion: (version) => getMSVSSetup(version).version,
   getOSBits,
-  findOldVcVarsFile : (_, arch) => findVcVarsFile(arch),
+  findOldVcVarsFile: (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
   _forTesting: {tryVS7_powershell, tryVS7_CSC, tryVS7_registry, getWithFullCmd}
 }

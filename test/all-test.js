@@ -47,7 +47,8 @@ describe('Try cmd tools in a weird path', () => {
   const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\"`;
   const {try_powershell_path, compile_run_path, try_registry_path} = getter
   before(() => {
-    execSync(`"cmd.exe" /s /c xcopy /s /q ${__dirname + '\\..\\tools\\*.*'} ${weirdDir}`)
+    const ret = execSync(`"cmd.exe" /s /c "xcopy /e /q ${__dirname + '\\..\\tools\\*.*'} ${weirdDir} "`)
+    assert(ret.includes("File(s) copied"))
   })
 
   it('Powershell', () => {
