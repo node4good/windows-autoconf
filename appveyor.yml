@@ -1,6 +1,7 @@
 # Test against the latest version of this Node.js version
 environment:
   nodejs_version: "7"
+  DEBUG: "autoconf,gyp.js"
   matrix:
     - GYP_MSVS_VERSION: "2010"
     - GYP_MSVS_VERSION: "2012"
@@ -15,7 +16,7 @@ install:
   # install modules
   - npm -g install mocha
   - npm link
-  - git clone https://github.com/indutny/gyp.js.git
+  - git clone https://github.com/node4good/gyp.js.git
   - cd gyp.js & npm link get-vs2017-path & npm i
 
 # Post-install test scripts.

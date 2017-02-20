@@ -37,6 +37,13 @@ const lazy = {
     }
     return this._bindings
   },
+  debug(...args) {if (this.isDebug) this.bindings.log(...args)},
+  debugDir(arg) {
+    if (this.isDebug) {
+      const util = require('util');
+      console.log('=============\n%s\n=============', util.inspect(arg, {colors: true}))
+    }
+  }
 }
 
 function setBindings (bindings) {
@@ -74,10 +81,10 @@ function tryVS7_registry () {
   const vsSetups = JSON.parse(vsSetupRaw)
   const max = vsSetups.reduce((s, i) => Math.max(s, Number(i.RegistryVersion)), 0)
   const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === max)
-  if (lazy.isDebug) lazy.bindings.log(vsSetup)
+  lazy.debugDir(vsSetup)
   if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
 
-  const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" & set`).toString().trim().split(/\r?\n/g)
+  const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" /nologo & set`).toString().trim().split(/\r?\n/g)
   vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
   vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, '$1')
   vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
@@ -204,6 +211,7 @@ function resolveDevEnvironment_inner (setup) {
 
 function resolveDevEnvironment (target_arch) {
   const setup = getWithFullCmd(target_arch)
+  lazy.debugDir(setup)
   const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
   const cacheName = lazy.bindings.path.join(__dirname, `_${cacheKey}${setup.Version}.json`)
   if (lazy.bindings.fs.existsSync(cacheName)) {

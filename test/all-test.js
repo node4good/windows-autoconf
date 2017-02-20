@@ -2,6 +2,7 @@
 'use strict'
 
 const fs = require('fs')
+const path = require('path')
 const assert = require('assert')
 const execSync = require('child_process').execSync
 const getter = require('../')
@@ -47,12 +48,17 @@ describe('Try cmd tools in a weird path', () => {
   const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\"`;
   const {try_powershell_path, compile_run_path, try_registry_path} = getter
   before(() => {
-    const ret = execSync(`"cmd.exe" /s /c "xcopy /e /q ${__dirname + '\\..\\tools\\*.*'} ${weirdDir} "`)
+    try {
+      execSync(`"cmd.exe" /s /c mkdir ${weirdDir}`)
+    } catch(_) {}
+    const ret = execSync(`"cmd.exe" /s /c "xcopy /y /r /e /q "${__dirname + '\\..\\tools\\*.*'}" ${weirdDir} "`).toString()
     assert(ret.includes("File(s) copied"))
+    getter.try_powershell_path = weirdDir + getter.try_powershell_path.split('\\').pop()
+    getter.compile_run_path = weirdDir + getter.compile_run_path.split('\\').pop()
+    getter.try_registry_path = weirdDir + getter.try_registry_path.split('\\').pop()
   })
 
   it('Powershell', () => {
-    getter.try_powershell_path = weirdDir + getter.try_powershell_path.split('\\').pop()
     const setup = getter._forTesting.tryVS7_powershell()
     assert(setup.Product)
     assert(setup.InstallationPath)
@@ -64,7 +70,6 @@ describe('Try cmd tools in a weird path', () => {
   })
 
   it('Compile and run', () => {
-    getter.try_powershell_path = weirdDir + getter.compile_run_path.split('\\').pop()
     const setup = getter._forTesting.tryVS7_CSC()
     assert(setup.Product)
     assert(setup.InstallationPath)
@@ -77,7 +82,6 @@ describe('Try cmd tools in a weird path', () => {
 
   it('Registry', function () {
     this.timeout(10000)
-    getter.try_powershell_path = weirdDir + getter.try_registry_path.split('\\').pop()
     const setup = getter._forTesting.tryVS7_registry()
     if (!setup) {
       console.log("registry method failed")
@@ -93,9 +97,14 @@ describe('Try cmd tools in a weird path', () => {
   })
 
   after(() => {
-    execSync(`"cmd.exe" /s /c rmdir /s /q ${weirdDir}`)
+    const pathParts = weirdDir.split('\\')
+    const i = pathParts.lastIndexOf('.tmp')
+    const baseParts = pathParts.slice(0, i + 2)
+    const weirdPart = baseParts.slice(-1)[0]
+    const basePath = baseParts.join('\\') + '"'
     Object.assign(getter, {try_powershell_path, compile_run_path, try_registry_path})
-    assert(!getter.try_powershell_path.includes(" t o l s !"))
+    assert(!getter.try_powershell_path.includes(weirdPart))
+    execSync(`"cmd.exe" /s /c rmdir /s /q ${basePath}`)
   })
 })
 
