@@ -37,6 +37,7 @@ jspm_packages
 .node_repl_history
 
 .idea
-*.exe
+/tools/*.exe
 /nuget_packs/
 /_*.json
+/test/.tmp/

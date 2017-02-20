@@ -220,7 +220,10 @@ namespace VisualStudioConfiguration
                 string sdkVer = parts[1];
                 char[] chars = {'1', '0', '8'};
                 if (sdkVer.IndexOfAny(chars) == -1) continue;
-                Console.Write(String.Format("\"SDK\": \"{0}\",\n", sdkVer));
+                Console.Write(String.Format("\"SDKFull\": \"{0}\",\n", sdkVer));
+                string[] sdkParts = sdkVer.Split('.');
+                sdkParts[sdkParts.Length - 1] = "000";
+                Console.Write(String.Format("\"SDK\": \"{0}\",\n", String.Join(".", sdkParts)));
             }
             String cmd = (setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat");
             cmd = cmd.Replace("\\", "\\\\");
@@ -236,6 +239,6 @@ public static class Program
     public static int Main(string[] args)
     {
         VisualStudioConfiguration.Main.Query();
-        return 1;
+        return 0;
     }
 }

@@ -3,6 +3,7 @@
  * @namespace vsSetup
  * @property {String} Product
  * @property {String} InstallationPath
+ * @property {String} SDKFull
  * @property {String} SDK
  * @property {String} CmdPath
  * @property {String} Version
@@ -15,6 +16,7 @@ const try_registry_path = `"${__dirname}\\tools\\try_registry.cmd"`
 const lazy = {
   _patched: false,
   _bindings: null,
+  get isDebug () {return (this._bindings.process.env['DEBUG'] || '').split(',').includes('autoconf')},
   get bindings () {
     if (!this._bindings) {
       this._bindings = {
@@ -26,8 +28,7 @@ const lazy = {
         process: process
       }
     }
-    const IS_DEBUG = (this._bindings.process.env['DEBUG'] || '').split(',').includes('autoconf')
-    if (IS_DEBUG && !this._patched) {
+    if (this.isDebug && !this._patched) {
       this._patched = true
       this._bindings._execSync = this._bindings.execSync
       this._bindings.execSync = (cmd, options) => {
@@ -73,7 +74,17 @@ function tryVS7_registry () {
     lazy.bindings.log('Couldn\'t find VS7 in registry:(')
     return
   }
-  const vsSetup = JSON.parse(vsSetupRaw)[0]
+  const vsSetups = JSON.parse(vsSetupRaw)
+  const max = vsSetups.reduce((s,i) => Math.max(s, Number(i.RegistryVersion)), 0)
+  const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === max)
+  if (lazy.isDebug) lazy.bindings.log(vsSetup)
+  if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
+
+  const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" & set`).toString().trim().split(/\r?\n/g);
+  vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
+  vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, "$1")
+  vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
+  vsSetup.Product = vsSetup.InstallationPath.split('\\').slice(-2, -1)[0]
   return vsSetup
 }
 

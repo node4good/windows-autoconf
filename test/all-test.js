@@ -44,47 +44,57 @@ describe('Try cmd tools', () => {
 
 describe('Try cmd tools in a weird path', () => {
 
-  const weirdDir = `"${__dirname}\\ t o l s !\\ oh$# boy lady gaga\\"`;
-
+  const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\"`;
+  const {try_powershell_path, compile_run_path, try_registry_path} = getter
   before(() => {
     execSync(`"cmd.exe" /s /c xcopy /s /q ${__dirname + '\\..\\tools\\*.*'} ${weirdDir}`)
   })
 
   it('Powershell', () => {
-    const newPath = weirdDir + getter.try_powershell_path.split('\\').pop()
-    const ret = execSync(newPath).toString()
-    const setup = JSON.parse(ret)[0]
+    getter.try_powershell_path = weirdDir + getter.try_powershell_path.split('\\').pop()
+    const setup = getter._forTesting.tryVS7_powershell()
     assert(setup.Product)
     assert(setup.InstallationPath)
     assert(setup.Version)
+    assert(setup.SDKFull)
     assert(setup.SDK)
     assert(setup.CmdPath)
     assert(fs.existsSync(setup.CmdPath))
   })
 
   it('Compile and run', () => {
-    const newPath = weirdDir + getter.compile_run_path.split('\\').pop()
-    const ret = execSync(newPath).toString()
-    const setup = JSON.parse(ret)[0]
+    getter.try_powershell_path = weirdDir + getter.compile_run_path.split('\\').pop()
+    const setup = getter._forTesting.tryVS7_CSC()
     assert(setup.Product)
     assert(setup.InstallationPath)
     assert(setup.Version)
+    assert(setup.SDKFull)
     assert(setup.SDK)
     assert(setup.CmdPath)
     assert(fs.existsSync(setup.CmdPath))
   })
 
-  it('Registry', () => {
-    const newPath = weirdDir + getter.try_registry_path.split('\\').pop()
-    const ret = execSync(newPath).toString()
-    const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
+  it('Registry', function () {
+    this.timeout(10000)
+    getter.try_powershell_path = weirdDir + getter.try_registry_path.split('\\').pop()
+    const setup = getter._forTesting.tryVS7_registry()
+    if (!setup) {
+      console.log("registry method failed")
+      return
+    }
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
+    assert(setup.Product)
+    assert(setup.Version)
+    assert(setup.SDKFull)
+    assert(setup.SDK)
   })
 
   after(() => {
     execSync(`"cmd.exe" /s /c rmdir /s /q ${weirdDir}`)
+    Object.assign(getter, {try_powershell_path, compile_run_path, try_registry_path})
+    assert(!getter.try_powershell_path.includes(" t o l s !"))
   })
 })
 
