@@ -10,7 +10,7 @@ install:
   - npm -g install mocha
   - npm link
   - git clone https://github.com/indutny/gyp.js.git
-  - cd gyp.js & npm i
+  - cd gyp.js & npm link package.json & npm i
 
 # Post-install test scripts.
 test_script:
@@ -18,7 +18,7 @@ test_script:
   - node --version
   - npm --version
   # run tests
-  - npm test
+  # - npm test
   - cd gyp.js & mocha
 
 # Don't actually build.
