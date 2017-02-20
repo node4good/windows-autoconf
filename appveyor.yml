@@ -1,6 +1,12 @@
 # Test against the latest version of this Node.js version
 environment:
   nodejs_version: "7"
+  matrix:
+    - GYP_MSVS_VERSION: "2010"
+    - GYP_MSVS_VERSION: "2012"
+    - GYP_MSVS_VERSION: "2013"
+    - GYP_MSVS_VERSION: "2015"
+
 
 # Install scripts. (runs after repo cloning)
 install:
@@ -10,7 +16,7 @@ install:
   - npm -g install mocha
   - npm link
   - git clone https://github.com/indutny/gyp.js.git
-  - cd gyp.js & npm link package.json & npm i
+  - cd gyp.js & npm link get-vs2017-path & npm i
 
 # Post-install test scripts.
 test_script:
