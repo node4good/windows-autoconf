@@ -79,8 +79,8 @@ function tryVS7_registry () {
     return
   }
   const vsSetups = JSON.parse(vsSetupRaw)
-  const max = vsSetups.reduce((s, i) => Math.max(s, Number(i.RegistryVersion)), 0)
-  const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === max)
+  const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === 15.0)
+  if (!vsSetup) return;
   lazy.debugDir(vsSetup)
   if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
 
@@ -96,9 +96,6 @@ let cache2017
 function getVS2017Setup () {
   if (cache2017) return cache2017
   const vsSetup = tryVS7_powershell() || tryVS7_CSC() || tryVS7_registry()
-  if (!vsSetup) {
-    throw new Error('Couldn\'t find VS7 :(')
-  }
   cache2017 = vsSetup
   return vsSetup
 }
