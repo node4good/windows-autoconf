@@ -1,4 +1,4 @@
-/* global describe, it */
+/* global describe, it, before, after */
 'use strict'
 
 const fs = require('fs')
@@ -40,6 +40,52 @@ describe('Try cmd tools', () => {
     assert(setup.CmdPath)
   })
 
+})
+
+describe('Try cmd tools in a weird path', () => {
+
+  const weirdDir = `"${__dirname}\\ t o l s !\\ oh$# boy lady gaga\\"`;
+
+  before(() => {
+    execSync(`"cmd.exe" /s /c xcopy /s /q ${__dirname + '\\..\\tools\\*.*'} ${weirdDir}`)
+  })
+
+  it('Powershell', () => {
+    const newPath = weirdDir + getter.try_powershell_path.split('\\').pop()
+    const ret = execSync(newPath).toString()
+    const setup = JSON.parse(ret)[0]
+    assert(setup.Product)
+    assert(setup.InstallationPath)
+    assert(setup.Version)
+    assert(setup.SDK)
+    assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
+  })
+
+  it('Compile and run', () => {
+    const newPath = weirdDir + getter.compile_run_path.split('\\').pop()
+    const ret = execSync(newPath).toString()
+    const setup = JSON.parse(ret)[0]
+    assert(setup.Product)
+    assert(setup.InstallationPath)
+    assert(setup.Version)
+    assert(setup.SDK)
+    assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
+  })
+
+  it('Registry', () => {
+    const newPath = weirdDir + getter.try_registry_path.split('\\').pop()
+    const ret = execSync(newPath).toString()
+    const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
+    assert(setup.RegistryVersion)
+    assert(setup.InstallationPath)
+    assert(setup.CmdPath)
+  })
+
+  after(() => {
+    execSync(`"cmd.exe" /s /c rmdir /s /q ${weirdDir}`)
+  })
 })
 
 function extractFile (str) {
