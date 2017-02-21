@@ -22,6 +22,19 @@ describe('Try cmd tools', () => {
     assert(fs.existsSync(setup.CmdPath))
   })
 
+  it('Powershell -Version 2', () => {
+    const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\Get-VS7.cs')
+    const cmd = `"powershell.exe" -Version 2 -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
+    const ret = execSync(cmd).toString()
+    const setup = JSON.parse(ret)[0]
+    assert(setup.Product)
+    assert(setup.InstallationPath)
+    assert(setup.Version)
+    assert(setup.SDK)
+    assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
+  })
+
   it('Compile and run', () => {
     const ret = execSync(getter.compile_run_path).toString()
     const setup = JSON.parse(ret)[0]
