@@ -214,11 +214,15 @@ function resolveDevEnvironment (target_arch) {
   if (lazy.bindings.fs.existsSync(cacheName)) {
     const file = lazy.bindings.fs.readFileSync(cacheName)
     const ret = JSON.parse(file)
+    lazy.debug('cache hit')
+    lazy.debugDir(ret)
     return ret
   } else {
     const env = resolveDevEnvironment_inner(setup)
     const file = JSON.stringify(env)
     lazy.bindings.fs.writeFileSync(cacheName, file)
+    lazy.debug('actual resolution')
+    lazy.debugDir(env)
     return env
   }
 }

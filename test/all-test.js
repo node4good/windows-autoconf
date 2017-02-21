@@ -2,7 +2,7 @@
 'use strict'
 
 const fs = require('fs')
-const path = require('path')
+const Path = require('path')
 const assert = require('assert')
 const execSync = require('child_process').execSync
 const getter = require('../')
@@ -23,7 +23,7 @@ describe('Try cmd tools', () => {
   })
 
   it('Powershell -Version 2', () => {
-    const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\Get-VS7.cs')
+    const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\Get-VS7.cs').replace('"', '')
     const cmd = `"powershell.exe" -Version 2 -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
     const ret = execSync(cmd).toString()
     const setup = JSON.parse(ret)[0]
@@ -58,17 +58,17 @@ describe('Try cmd tools', () => {
 
 describe('Try cmd tools in a weird path', () => {
 
-  const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\"`;
+  const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\`;
   const {try_powershell_path, compile_run_path, try_registry_path} = getter
   before(() => {
     try {
       execSync(`"cmd.exe" /s /c mkdir ${weirdDir}`)
     } catch(_) {}
-    const ret = execSync(`"cmd.exe" /s /c "xcopy /y /r /e /q "${__dirname + '\\..\\tools\\*.*'}" ${weirdDir} "`).toString()
+    const ret = execSync(`"cmd.exe" /s /c "xcopy /y /r /e /q "${__dirname + '\\..\\tools\\*.*'}" ${weirdDir}" "`).toString()
     assert(ret.includes("File(s) copied"))
-    getter.try_powershell_path = weirdDir + getter.try_powershell_path.split('\\').pop()
-    getter.compile_run_path = weirdDir + getter.compile_run_path.split('\\').pop()
-    getter.try_registry_path = weirdDir + getter.try_registry_path.split('\\').pop()
+    getter.try_powershell_path = Path.join(weirdDir, Path.basename(getter.try_powershell_path))
+    getter.compile_run_path = Path.join(weirdDir, Path.basename(getter.compile_run_path))
+    getter.try_registry_path = Path.join(weirdDir, Path.basename(getter.try_registry_path))
   })
 
   it('Powershell', () => {
