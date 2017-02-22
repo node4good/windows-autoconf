@@ -40,4 +40,3 @@ jspm_packages
 /tools/*.exe
 /nuget_packs/
 /_*.json
-/test/.tmp/
