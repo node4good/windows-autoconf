@@ -1,8 +1,8 @@
+'use strict'
 /* global describe, it, before, after */
 /** @namespace this
  *  @property {function} skip
  */
-'use strict'
 
 const fs = require('fs')
 const Path = require('path')
@@ -154,51 +154,59 @@ function extractFile (str) {
 }
 
 describe('Try node wrapper', function () {
-  this.timeout(10000)
-  it('getVS2017Path x64', () => {
-    const ret = getter.getVS2017Path(null, 'x64')
-    const parts = ret.split('\\')
-    assert(parts.length >= 4)
-    assert(parts.includes('Common7') || parts.includes('VC'))
-    assert(ret.match(/\.bat/i))
-    const path = extractFile(ret)
-    assert(fs.existsSync(path))
-  })
-
-  it('getVS2017Path ia32', () => {
-    const ret = getter.getVS2017Path(null, 'ia32')
-    const parts = ret.split('\\')
-    assert(parts.length >= 4)
-    assert(parts.includes('Common7') || parts.includes('VC'))
-    assert(ret.match(/\.bat/i))
-    const path = extractFile(ret)
-    assert(fs.existsSync(path))
-  })
-
-  it('getVS2017Setup', () => {
-    const vsSetup = getter.getVS2017Setup()
-    assert(vsSetup.InstallationPath)
-    const parts = vsSetup.InstallationPath.split('\\')
-    assert(parts.length >= 4)
-    const prod = Path.basename(vsSetup.InstallationPath)
-    assert(prods.has(prod), `${prod} not in ${prods}`)
-    assert(vsSetup.CmdPath)
-    assert(vsSetup.CmdPath.match(/\.bat$/i))
-    assert(fs.existsSync(vsSetup.InstallationPath))
-    assert(fs.existsSync(vsSetup.CmdPath))
-  })
-
-  it('locateMsbuild', () => {
-    const path = getter.locateMsbuild()
-    const parts = path.split('\\')
-    assert(parts.length >= 4)
-    assert(path.match(/MSBuild\.exe$/i))
-    assert(fs.existsSync(path))
-  })
-
   it('getMSVSVersion', () => {
     const version = getter.getMSVSVersion()
     assert.equal(version, process.env['GYP_MSVS_VERSION'] || '2017')
+  })
+
+  describe('2017 only', function () {
+    this.timeout(10000)
+
+    before(function () {
+      const version = getter.getMSVSVersion()
+      if (version !== '2017') this.skip()
+    })
+
+    it('getVS2017Path x64', () => {
+      const ret = getter.getVS2017Path(null, 'x64')
+      const parts = ret.split('\\')
+      assert(parts.length >= 4)
+      assert(parts.includes('Common7') || parts.includes('VC'))
+      assert(ret.match(/\.bat/i))
+      const path = extractFile(ret)
+      assert(fs.existsSync(path))
+    })
+
+    it('getVS2017Path ia32', () => {
+      const ret = getter.getVS2017Path(null, 'ia32')
+      const parts = ret.split('\\')
+      assert(parts.length >= 4)
+      assert(parts.includes('Common7') || parts.includes('VC'))
+      assert(ret.match(/\.bat/i))
+      const path = extractFile(ret)
+      assert(fs.existsSync(path))
+    })
+
+    it('getVS2017Setup', () => {
+      const vsSetup = getter.getVS2017Setup()
+      assert(vsSetup.InstallationPath)
+      const parts = vsSetup.InstallationPath.split('\\')
+      assert(parts.length >= 4)
+      const prod = Path.basename(vsSetup.InstallationPath)
+      assert(prods.has(prod), `${prod} not in ${prods}`)
+      assert(vsSetup.CmdPath)
+      assert(vsSetup.CmdPath.match(/\.bat$/i))
+      assert(fs.existsSync(vsSetup.InstallationPath))
+      assert(fs.existsSync(vsSetup.CmdPath))
+    })
+
+    it('locateMsbuild', () => {
+      const path = getter.locateMsbuild()
+      const parts = path.split('\\')
+      assert(parts.length >= 4)
+      assert(path.match(/MSBuild\.exe$/i))
+      assert(fs.existsSync(path))
+    })
   })
 
   it('getOSBits', () => {
@@ -246,8 +254,16 @@ describe('Try node wrapper', function () {
 
 describe('genEnvironment', function () {
   this.timeout(20000)
+
   it('resolve for x64', () => {
-    const env = getter.resolveDevEnvironment('x64')
+    let env
+    try {
+      env = getter.resolveDevEnvironment('x64')
+    } catch (e) {
+      if (!e.message.includes('not installed for')) throw e
+      console.log(e.message)
+      return
+    }
     assert(env, 'didn\'t get ENVIRONMENT :(')
     const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
     assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :(')
@@ -258,8 +274,19 @@ describe('genEnvironment', function () {
   })
 
   it('resolve for x86', () => {
-    const env = getter.resolveDevEnvironment('ia32')
+    let env
+    try {
+      env = getter.resolveDevEnvironment('ia32')
+    } catch (e) {
+      if (!e.message.includes('not installed for')) throw e
+      console.log(e.message)
+      return
+    }
     assert(env, 'didn\'t get ENVIRONMENT :(')
+    if (env instanceof String) {
+      console.log(env)
+      return
+    }
     const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
     assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :(')
     if (env['VisualStudioVersion'] === '15.0') {
