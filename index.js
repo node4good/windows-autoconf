@@ -96,11 +96,11 @@ function tryVS7_registry () {
   }
 }
 
-let cache2017
 function getVS2017Setup () {
-  if (cache2017) return cache2017
-  const vsSetup = tryVS7_powershell() || tryVS7_CSC() || tryVS7_registry()
-  cache2017 = vsSetup
+  if ('cache2017' in getVS2017Setup) return getVS2017Setup.cache2017
+  const vsSetupViaCom = tryVS7_powershell() || tryVS7_CSC()
+  const vsSetup = (vsSetupViaCom === 'No COM') ? tryVS7_registry() : vsSetupViaCom
+  getVS2017Setup.cache2017 = vsSetup
   return vsSetup
 }
 
@@ -114,7 +114,7 @@ function locateMsbuild () {
 
 let msvs2017
 function getMSVSSetup (version) {
-  if (msvs2017) return msvs2017
+  if ('cacheSetup' in getMSVSSetup) return getMSVSSetup.cacheSetup
   const env = lazy.bindings.process.env
   if (!version)
     version = env['GYP_MSVS_VERSION'] || 'auto'
@@ -122,11 +122,11 @@ function getMSVSSetup (version) {
   let setup = getVS2017Setup()
   if (version === '2017' || (version === 'auto' && setup && setup.InstallationPath)) {
     setup.version = '2017'
-  } else if (version === 'auto' && env['VS140COMNTOOLS'] || version === '2015') {
+  } else if (version === '2015' || version === 'auto' && env['VS140COMNTOOLS']) {
     setup = {version: '2015', CommonTools: env['VS140COMNTOOLS']}
-  } else if (version === 'auto' && env['VS120COMNTOOLS'] || version === '2013') {
+  } else if (version === '2013' || version === 'auto' && env['VS120COMNTOOLS']) {
     setup = {version: '2013', CommonTools: env['VS120COMNTOOLS']}
-  } else if (version === 'auto' && env['VS100COMNTOOLS'] || version === '2010') {
+  } else if (version === '2010' || version === 'auto' && env['VS100COMNTOOLS']) {
     setup = {version: '2010', CommonTools: env['VS100COMNTOOLS']}
   } else {
     setup = {version, InstallationPath: ''}
@@ -134,7 +134,7 @@ function getMSVSSetup (version) {
   if (setup.CommonTools) {
     setup.InstallationPath = lazy.bindings.path.join(setup.CommonTools, '..', '..')
   }
-  msvs2017 = setup
+  getMSVSSetup.cacheSetup = setup
   return setup
 }
 
@@ -200,12 +200,14 @@ function resolveDevEnvironment_inner (setup) {
     const preSet = new Set(pre)
     const rawLines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
     const hasFail = rawLines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
-    //noinspection ExceptionCaughtLocallyJS
-    if (hasFail) throw new Error('Visual studio tools for C++ where not installed for ' + target_arch)
+    if (hasFail) {
+      //noinspection ExceptionCaughtLocallyJS
+      throw new Error('Visual studio tools for C++ where not installed for ' + target_arch)
+    }
     lines = rawLines.filter(l => !preSet.has(l))
   } catch (e) {
     lazy.bindings.error(e.message)
-    return;
+    return
   }
   const env = lines.reduce((s, l) => {
     const kv = l.split('=')
