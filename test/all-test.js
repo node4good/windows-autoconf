@@ -63,6 +63,10 @@ describe('Try cmd tools', () => {
 
   it('Registry', () => {
     const ret = execSync(getter.try_registry_path).toString()
+    if (!ret) {
+      console.log('registry method failed')
+      return
+    }
     const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
