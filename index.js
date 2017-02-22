@@ -40,7 +40,7 @@ const lazy = {
   debug(...args) {if (this.isDebug) this.bindings.log(...args)},
   debugDir(arg) {
     if (this.isDebug) {
-      const util = require('util');
+      const util = require('util')
       console.log('=============\n%s\n=============', util.inspect(arg, {colors: true}))
     }
   }
@@ -57,7 +57,7 @@ function tryVS7_powershell () {
     const vsSetup = JSON.parse(vsSetupRaw)[0]
     return vsSetup
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find VS7 with powershell', e.message)
+    lazy.bindings.log('Couldn\'t find VS7 with powershell')
   }
 }
 
@@ -68,28 +68,32 @@ function tryVS7_CSC () {
     const vsSetup = JSON.parse(vsSetupRaw)[0]
     return vsSetup
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find VS7 with a compiled exe', e.message)
+    lazy.bindings.log('Couldn\'t find VS7 with a compiled exe')
   }
 }
 
 function tryVS7_registry () {
-  const vsSetupRaw = lazy.bindings.execSync(module.exports.try_registry_path).toString()
-  if (vsSetupRaw.includes('ERROR')) {
-    lazy.bindings.log('Couldn\'t find VS7 in registry:(')
-    return
-  }
-  const vsSetups = JSON.parse(vsSetupRaw)
-  const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === 15.0)
-  if (!vsSetup) return;
-  lazy.debugDir(vsSetup)
-  if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
+  try {
+    const vsSetupRaw = lazy.bindings.execSync(module.exports.try_registry_path).toString()
+    if (vsSetupRaw.includes('ERROR')) {
+      lazy.bindings.log('Couldn\'t find VS7 in registry:(')
+      return
+    }
+    const vsSetups = JSON.parse(vsSetupRaw)
+    const vsSetup = vsSetups.find(i => Number(i.RegistryVersion) === 15.0)
+    if (!vsSetup) return
+    lazy.debugDir(vsSetup)
+    if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
 
-  const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" /nologo & set`).toString().trim().split(/\r?\n/g)
-  vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
-  vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, '$1')
-  vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
-  vsSetup.Product = vsSetup.InstallationPath.split('\\').slice(-2, -1)[0]
-  return vsSetup
+    const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" /nologo & set`).toString().trim().split(/\r?\n/g)
+    vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
+    vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, '$1')
+    vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
+    vsSetup.Product = vsSetup.InstallationPath.split('\\').slice(-2, -1)[0]
+    return vsSetup
+  } catch (e) {
+    lazy.bindings.log('Couldn\'t find VS7 via the registry')
+  }
 }
 
 let cache2017
@@ -148,20 +152,22 @@ function getOSBits () {
 
 function getWithFullCmd (target_arch) {
   let setup = getMSVSSetup()
-  const hostBits = getOSBits()
+  setup.target_arch = target_arch
+  setup.hostBits = getOSBits()
 
   if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
   // NOTE: Largely inspired by `GYP`::MSVSVersion.py
   if (setup.version === '2017') {
-    const argArch = target_arch === 'x64' ? 'amd64' : target_arch === 'ia32' ? 'x86' : 'gaga'
-    if (argArch === 'gaga') throw new Error(`Arch: '${target_arch}' is not supported`)
-    const argHost = hostBits === 64 ? 'amd64' : 'x86'
+    const argArch = target_arch === 'x64' ? 'amd64' : target_arch === 'ia32' ? 'x86' : new Error(`Arch: '${target_arch}' is not supported`)
+    if (argArch instanceof Error) throw argArch
+    const argHost = setup.hostBits === 64 ? 'amd64' : 'x86'
     setup.FullCmd = `${setup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
   } else {
     let cmdPathParts
     let arg
+    setup.effectiveBits = setup.InstallationPath.includes('(x86)') ? 32 : setup.hostBits
     if (target_arch === 'ia32') {
-      if (hostBits === 64) {
+      if (setup.effectiveBits === 64) {
         cmdPathParts = ['VC', 'vcvarsall.bat']
         arg = 'amd64_x86'
       } else {
@@ -170,7 +176,7 @@ function getWithFullCmd (target_arch) {
       }
     } else if (target_arch === 'x64') {
       cmdPathParts = ['VC', 'vcvarsall.bat']
-      arg = hostBits === 64 ? 'amd64' : 'x86_amd64'
+      arg = setup.effectiveBits === 64 ? 'amd64' : 'x86_amd64'
     } else {
       throw new Error(`Arch: '${target_arch}' is not supported`)
     }
@@ -193,9 +199,13 @@ function resolveDevEnvironment_inner (setup) {
     const pre = lazy.bindings.execSync('set').toString().trim().split(/\r\n/g)
     const preSet = new Set(pre)
     const rawLines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
+    const hasFail = rawLines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
+    //noinspection ExceptionCaughtLocallyJS
+    if (hasFail) throw new Error('Visual studio tools for C++ where not installed for ' + target_arch)
     lines = rawLines.filter(l => !preSet.has(l))
   } catch (e) {
     lazy.bindings.error(e.message)
+    return;
   }
   const env = lines.reduce((s, l) => {
     const kv = l.split('=')
