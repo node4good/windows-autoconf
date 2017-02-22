@@ -13,7 +13,7 @@
 const lazy = {
   _patched: false,
   _bindings: null,
-  get isDebug () {return (this._bindings.process.env['DEBUG'] || '').split(',').includes('autoconf')},
+  get isDebug () { return (this._bindings.process.env['DEBUG'] || '').split(',').includes('autoconf') },
   get bindings () {
     if (!this._bindings) {
       this._bindings = {
@@ -37,8 +37,8 @@ const lazy = {
     }
     return this._bindings
   },
-  debug(...args) {if (this.isDebug) this.bindings.log(...args)},
-  debugDir(arg) {
+  debug (...args) { if (this.isDebug) this.bindings.log(...args) },
+  debugDir (arg) {
     if (this.isDebug) {
       const util = require('util')
       console.log('=============\n%s\n=============', util.inspect(arg, {colors: true}))
@@ -50,7 +50,7 @@ function setBindings (bindings) {
   lazy._bindings = bindings
 }
 
-function tryVS7_powershell () {
+function tryVS7Powershell () {
   try {
     const vsSetupRaw = lazy.bindings.execSync(module.exports.try_powershell_path).toString()
     if (!vsSetupRaw) return
@@ -61,7 +61,7 @@ function tryVS7_powershell () {
   }
 }
 
-function tryVS7_CSC () {
+function tryVS7CSC () {
   try {
     const vsSetupRaw = lazy.bindings.execSync(module.exports.compile_run_path).toString()
     if (!vsSetupRaw) return
@@ -72,7 +72,7 @@ function tryVS7_CSC () {
   }
 }
 
-function tryVS7_registry () {
+function tryVS7Registry () {
   try {
     const vsSetupRaw = lazy.bindings.execSync(module.exports.try_registry_path).toString()
     if (vsSetupRaw.includes('ERROR')) {
@@ -98,26 +98,24 @@ function tryVS7_registry () {
 
 function getVS2017Setup () {
   if ('cache2017' in getVS2017Setup) return getVS2017Setup.cache2017
-  const vsSetupViaCom = tryVS7_powershell() || tryVS7_CSC()
-  const vsSetup = (vsSetupViaCom === 'No COM') ? tryVS7_registry() : vsSetupViaCom
+  const vsSetupViaCom = tryVS7Powershell() || tryVS7CSC()
+  const vsSetup = (vsSetupViaCom === 'No COM') ? tryVS7Registry() : vsSetupViaCom
   getVS2017Setup.cache2017 = vsSetup
   return vsSetup
 }
 
 function locateMsbuild () {
   const vsSetup = getVS2017Setup()
-  const msbuild_location = lazy.bindings.path.join(
+  const msbuildLocation = lazy.bindings.path.join(
     vsSetup.InstallationPath, 'MSBuild', '15.0', 'Bin', 'MSBuild.exe'
   )
-  return msbuild_location
+  return msbuildLocation
 }
 
-let msvs2017
 function getMSVSSetup (version) {
   if ('cacheSetup' in getMSVSSetup) return getMSVSSetup.cacheSetup
   const env = lazy.bindings.process.env
-  if (!version)
-    version = env['GYP_MSVS_VERSION'] || 'auto'
+  if (!version) { version = env['GYP_MSVS_VERSION'] || 'auto' }
 
   let setup = getVS2017Setup()
   if (version === '2017' || (version === 'auto' && setup && setup.InstallationPath)) {
@@ -146,21 +144,18 @@ function getOSBits () {
   // PROCESSOR_ARCHITEW6432 - is a system arch
   // PROCESSOR_ARCHITECTURE - is a session arch
   const hostArch = env['PROCESSOR_ARCHITEW6432'] || env['PROCESSOR_ARCHITECTURE']
-  if (hostArch === 'AMD64')
-    return 64
-  else
-    return 32
+  if (hostArch === 'AMD64') { return 64 } else { return 32 }
 }
 
-function getWithFullCmd (target_arch) {
+function getWithFullCmd (targetArch) {
   let setup = getMSVSSetup()
-  setup.target_arch = target_arch
+  setup.target_arch = targetArch
   setup.hostBits = getOSBits()
 
   if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
   // NOTE: Largely inspired by `GYP`::MSVSVersion.py
   if (setup.version === '2017') {
-    const argArch = target_arch === 'x64' ? 'amd64' : target_arch === 'ia32' ? 'x86' : new Error(`Arch: '${target_arch}' is not supported`)
+    const argArch = targetArch === 'x64' ? 'amd64' : targetArch === 'ia32' ? 'x86' : new Error(`Arch: '${targetArch}' is not supported`)
     if (argArch instanceof Error) throw argArch
     const argHost = setup.hostBits === 64 ? 'amd64' : 'x86'
     setup.FullCmd = `${setup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
@@ -168,7 +163,7 @@ function getWithFullCmd (target_arch) {
     let cmdPathParts
     let arg
     setup.effectiveBits = setup.InstallationPath.includes('(x86)') ? 32 : setup.hostBits
-    if (target_arch === 'ia32') {
+    if (targetArch === 'ia32') {
       if (setup.effectiveBits === 64) {
         cmdPathParts = ['VC', 'vcvarsall.bat']
         arg = 'amd64_x86'
@@ -176,11 +171,11 @@ function getWithFullCmd (target_arch) {
         cmdPathParts = ['Common7', 'Tools', 'vsvars32.bat']
         arg = ''
       }
-    } else if (target_arch === 'x64') {
+    } else if (targetArch === 'x64') {
       cmdPathParts = ['VC', 'vcvarsall.bat']
       arg = setup.effectiveBits === 64 ? 'amd64' : 'x86_amd64'
     } else {
-      throw new Error(`Arch: '${target_arch}' is not supported`)
+      throw new Error(`Arch: '${targetArch}' is not supported`)
     }
     setup.CmdPath = lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)
     setup.FullCmd = `"${setup.CmdPath}" ${arg}`
@@ -188,21 +183,21 @@ function getWithFullCmd (target_arch) {
   return setup
 }
 
-function findVcVarsFile (target_arch) {
-  let setup = getWithFullCmd(target_arch)
+function findVcVarsFile (targetArch) {
+  let setup = getWithFullCmd(targetArch)
   if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
   return setup.FullCmd
 }
 
-function resolveDevEnvironment_inner (setup) {
+function resolveDevEnvironmentInner (setup) {
   const vcEnvCmd = setup.FullCmd
   const pre = lazy.bindings.execSync('set').toString().trim().split(/\r\n/g)
   const preSet = new Set(pre)
   const rawLines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
   const hasFail = rawLines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
   if (hasFail) {
-    //noinspection ExceptionCaughtLocallyJS
-    throw new Error('Visual studio tools for C++ where not installed for ' + target_arch)
+    // noinspection ExceptionCaughtLocallyJS
+    throw new Error('Visual studio tools for C++ where not installed for ' + setup.target_arch)
   }
   const lines = rawLines.filter(l => !preSet.has(l))
   const env = lines.reduce((s, l) => {
@@ -214,8 +209,8 @@ function resolveDevEnvironment_inner (setup) {
   return env
 }
 
-function resolveDevEnvironment (target_arch) {
-  const setup = getWithFullCmd(target_arch)
+function resolveDevEnvironment (targetArch) {
+  const setup = getWithFullCmd(targetArch)
   lazy.debugDir(setup)
   const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
   const cacheName = lazy.bindings.path.join(__dirname, `_${cacheKey}${setup.Version}.json`)
@@ -226,7 +221,7 @@ function resolveDevEnvironment (target_arch) {
     lazy.debugDir(ret)
     return ret
   } else {
-    const env = resolveDevEnvironment_inner(setup)
+    const env = resolveDevEnvironmentInner(setup)
     const file = JSON.stringify(env)
     lazy.bindings.fs.writeFileSync(cacheName, file)
     lazy.debug('actual resolution')
@@ -247,5 +242,5 @@ module.exports = {
   getOSBits,
   findOldVcVarsFile: (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
-  _forTesting: {tryVS7_powershell, tryVS7_CSC, tryVS7_registry, getWithFullCmd}
+  _forTesting: {tryVS7Powershell, tryVS7CSC, tryVS7Registry, getWithFullCmd}
 }

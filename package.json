@@ -7,7 +7,10 @@
     "win32"
   ],
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "eslint": "^3.16.1",
+    "eslint-plugin-standard": "^2.0.1"
+  },
   "scripts": {
     "test": "mocha test"
   },

@@ -1,3 +1,4 @@
+/* eslint-disable no-path-concat */
 'use strict'
 /* global describe, it, before, after */
 /** @namespace this
@@ -20,7 +21,6 @@ describe('Try cmd tools', () => {
       if (setup === 'No COM') {
         this.skip()
       }
-
     })
 
     it('Powershell', () => {
@@ -59,7 +59,6 @@ describe('Try cmd tools', () => {
       assert(setup.CmdPath)
       assert(fs.existsSync(setup.CmdPath))
     })
-
   })
 
   it('Registry', () => {
@@ -69,11 +68,9 @@ describe('Try cmd tools', () => {
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
   })
-
 })
 
 describe('Try cmd tools in a weird path', () => {
-
   const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\`
   const {try_powershell_path, compile_run_path, try_registry_path} = getter
   before(() => {
@@ -97,7 +94,7 @@ describe('Try cmd tools in a weird path', () => {
     })
 
     it('Powershell', () => {
-      const setup = getter._forTesting.tryVS7_powershell()
+      const setup = getter._forTesting.tryVS7Powershell()
       if (setup === 'No COM') return
 
       assert(setup.Product)
@@ -110,7 +107,7 @@ describe('Try cmd tools in a weird path', () => {
     })
 
     it('Compile and run', () => {
-      const setup = getter._forTesting.tryVS7_CSC()
+      const setup = getter._forTesting.tryVS7CSC()
       assert(setup.Product)
       assert(setup.InstallationPath)
       assert(setup.Version)
@@ -123,7 +120,7 @@ describe('Try cmd tools in a weird path', () => {
 
   it('Registry', function () {
     this.timeout(10000)
-    const setup = getter._forTesting.tryVS7_registry()
+    const setup = getter._forTesting.tryVS7Registry()
     if (!setup) {
       console.log('registry method failed')
       return
@@ -249,7 +246,6 @@ describe('Try node wrapper', function () {
     assert(parts.pop().match(/vs|vars/i))
     assert(fs.existsSync(cmd))
   })
-
 })
 
 describe('genEnvironment', function () {
