@@ -4,9 +4,6 @@ environment:
   DEBUG: "autoconf,gyp.js"
   matrix:
     - GYP_MSVS_VERSION: "2010"
-    - GYP_MSVS_VERSION: "2012"
-    - GYP_MSVS_VERSION: "2013"
-    - GYP_MSVS_VERSION: "2015"
 
 
 # Install scripts. (runs after repo cloning)
@@ -30,3 +27,6 @@ test_script:
 
 # Don't actually build.
 build: off
+
+on_finish:
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
