@@ -17,7 +17,7 @@ install:
   - npm -g install mocha
   - npm link
   - git clone https://github.com/node4good/gyp.js.git
-  - cd gyp.js & npm link get-vs2017-path & npm i
+  - cd gyp.js & npm link get-vs2017-path & npm i --production
 
 # Post-install test scripts.
 test_script:
@@ -25,7 +25,7 @@ test_script:
   - node --version
   - npm --version
   # run tests
-  # - npm test
+  - npm test
   - cd gyp.js & mocha
 
 # Don't actually build.
