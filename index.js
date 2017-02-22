@@ -126,6 +126,8 @@ function getMSVSSetup (version) {
     setup = {version: '2015', CommonTools: env['VS140COMNTOOLS']}
   } else if (version === '2013' || version === 'auto' && env['VS120COMNTOOLS']) {
     setup = {version: '2013', CommonTools: env['VS120COMNTOOLS']}
+  } else if (version === '2012' || version === 'auto' && env['VS110COMNTOOLS']) {
+    setup = {version: '2012', CommonTools: env['VS110COMNTOOLS']}
   } else if (version === '2010' || version === 'auto' && env['VS100COMNTOOLS']) {
     setup = {version: '2010', CommonTools: env['VS100COMNTOOLS']}
   } else {
