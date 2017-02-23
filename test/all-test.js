@@ -63,11 +63,11 @@ describe('Try cmd tools', () => {
 
   it('Registry', () => {
     const ret = execSync(getter.try_registry_path).toString()
-    if (!ret) {
+    const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
+    if (!setup) {
       console.log('registry method failed')
       return
     }
-    const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
@@ -155,13 +155,13 @@ function extractFile (str) {
 }
 
 describe('Try node wrapper', function () {
+  this.timeout(10000)
+
   it('getMSVSVersion', () => {
     const version = getter.getMSVSVersion()
     assert.equal(version, process.env['GYP_MSVS_VERSION'] || '2017')
   })
-
   describe('2017 only', function () {
-    this.timeout(10000)
 
     before(function () {
       const version = getter.getMSVSVersion()
