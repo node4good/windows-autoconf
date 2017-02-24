@@ -1,29 +1,27 @@
 {
-  "name": "get-vs2017-path",
+  "name": "windows-autoconf",
   "version": "1.7.0",
-  "description": "Try to find the VS2017 buildtools path via COM or registry",
+  "description": "Try to find MS build tools",
   "main": "index.js",
-  "os": [
-    "win32"
-  ],
+  "os": [ "win32" ],
   "dependencies": {},
-  "devDependencies": {
-    "eslint": "^3.16.1",
-    "eslint-plugin-standard": "^2.0.1"
-  },
+  "devDependencies": {},
   "scripts": {
     "test": "mocha test"
   },
-  "repository": "node4good/get-vs2017-path",
+  "repository": "node4good/windows-autoconf",
   "keywords": [
+    "Visual Studio",
     "Visual Studio 2017",
-    "COM-Serogate",
-    "powershell"
+    "autoconf",
+    "automake",
+    "ninja",
+    "GYP"
   ],
   "author": "Refael Ackermann <me@refack.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/node4good/get-vs2017-path/issues"
+    "url": "https://github.com/node4good/windows-autoconf/issues"
   },
-  "homepage": "https://github.com/node4good/get-vs2017-path#readme"
+  "homepage": "https://github.com/node4good/windows-autoconf#readme"
 }

@@ -1,5 +1,5 @@
-# get-vs2017-path
-Try to find Visual Studio installation path via COM or registry
+# windows-autoconf
+Try to find MS build tools, and provide installing path and other info needed for compiling 
 
 [![NPM](https://nodei.co/npm/get-vs2017-path.png)](https://nodei.co/npm/get-vs2017-path/)
 [![Standard - JavaScript Style Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
@@ -30,4 +30,4 @@ There are 3 scripts
  2. `compile-run.cmd` will try to find a C# compiler to compile the query then run the generated exe
  3. `try_registry.cmd` will look for undocumented registry traces 
 
-The Javascript interface will find older versions as well
+As the tools was getting traction, I added more use cases such as resolving version and location of Windows SDKs, enumerating "Include" directories, and outputting configuration files for verius build systems

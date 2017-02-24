@@ -162,7 +162,6 @@ describe('Try node wrapper', function () {
     assert.equal(version, process.env['GYP_MSVS_VERSION'] || '2017')
   })
   describe('2017 only', function () {
-
     before(function () {
       const version = getter.getMSVSVersion()
       if (version !== '2017') this.skip()
