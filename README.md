@@ -3,7 +3,7 @@ Try to find MS build tools, and provide installing path and other info needed fo
 
 [![NPM](https://nodei.co/npm/get-vs2017-path.png)](https://nodei.co/npm/get-vs2017-path/)
 [![Standard - JavaScript Style Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
-[![AppVeyor](https://ci.appveyor.com/api/projects/status/chx2jj1qx3ubblnp/branch/master?svg=true)](https://ci.appveyor.com/project/refack/get-vs2017-path/branch/master)
+[![AppVeyor](https://ci.appveyor.com/api/projects/status/u7812xmwxij7ljlh?svg=true)](https://ci.appveyor.com/project/refack/windows-autoconf)
 
 ---
 As of VS7 (a.k.a. Visual Studio 2017) [Microsoft recommends](https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/) to query the VS setup state via COM, but not everybody is fluent in COM, and not every language has COM bindings, so I created some scripts that utilize Windows builtin tools to query this information. The resolved information is printed to stdout in JSON, e.g.
