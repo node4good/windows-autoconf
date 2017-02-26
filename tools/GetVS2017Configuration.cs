@@ -1,5 +1,6 @@
 ﻿// powershell -ExecutionPolicy Unrestricted -Version "2.0" -Command "&{ Add-Type -Path Program.cs; [VisualStudioConfiguration.Program]::Main(@())}"
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace VisualStudioConfiguration
@@ -112,6 +113,7 @@ namespace VisualStudioConfiguration
         [return: MarshalAs(UnmanagedType.VariantBool)]
         bool IsComplete();
 
+        [return: MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UNKNOWN)]
         ISetupPropertyStore GetProperties();
 
         [return: MarshalAs(UnmanagedType.BStr)]
@@ -204,26 +206,57 @@ namespace VisualStudioConfiguration
             string prod = prodParts[0];
             string instPath = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
             Console.Write(String.Format("\"Product\": \"{0}\",\n", prod));
-            Console.Write(String.Format("\"InstallationPath\": \"{0}\",\n", instPath));
             Console.Write(String.Format("\"Version\": \"{0}\",\n", setupInstance2.GetInstallationVersion()));
+            Console.Write(String.Format("\"InstallationPath\": \"{0}\",\n", instPath));
+            String cmd = (instPath + "\\\\Common7\\\\Tools\\\\VsDevCmd.bat");
+            Console.Write(String.Format("\"CmdPath\": \"{0}\",\n", cmd));
+
+            Console.Write(String.Format("\"Properties\": {\n"));
+            ISetupPropertyStore propsContainer = setupInstance2.GetProperties();
+            string[] names = propsContainer.GetNames();
+            Console.Write(String.Format("\"Props\": [\n{0}\n]", String.Join(",\n", names)));
+            List<string> props = new List<String>();
+            foreach (string name in names)
+            {
+                Console.Write(String.Format("\t\"{0}\": ", name));
+                // string val = propsContainer.GetValue(name).ToString();
+                // Console.Write(String.Format("\"{1}\",\n", val));
+            }
+            Console.Write(String.Format("\n}"));
+
+            List<string> packs = new List<String>();
+            string MSBuild = "false";
+            string VCTools = "false";
+            string Win8SDK = "false";
+            string sdk10Ver = "false";
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
-                if (package.GetType() != "Exe") continue;
                 string id = package.GetId();
-                if (id.IndexOf("SDK", StringComparison.Ordinal) == -1) continue;
-                string[] parts = id.Split('_');
-                if (parts.Length < 2) continue;
-                string sdkVer = parts[1];
-                char[] chars = {'1', '0', '8'};
-                if (sdkVer.IndexOfAny(chars) == -1) continue;
-                Console.Write(String.Format("\"SDKFull\": \"{0}\",\n", sdkVer));
-                string[] sdkParts = sdkVer.Split('.');
-                sdkParts[sdkParts.Length - 1] = "0";
-                Console.Write(String.Format("\"SDK\": \"{0}\",\n", String.Join(".", sdkParts)));
+                string name = '\t' + '"' + id + '_' + package.GetVersion() + '"';
+                packs.Add(name);
+
+                if (id.Contains("Component.MSBuild")) {
+                    MSBuild = name;
+                } else if (id.Contains("VC.Tools")) {
+                    VCTools = name;
+                } else if (id.Contains("SDK")) {
+                    string[] parts = id.Split('_');
+                    if (parts.Length < 2) continue;
+                    string sdkVer = parts[1];
+                    if (sdkVer.Contains("8")) {
+                        Win8SDK = name;
+                    } else if (sdkVer.Contains("10")) {
+                        string[] sdk10Parts = sdkVer.Split('.');
+                        sdk10Parts[sdk10Parts.Length - 1] = "0";
+                        sdk10Ver = '"' + String.Join(".", sdk10Parts) + '"';
+                    }
+                }
             }
-            String cmd = (setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat");
-            cmd = cmd.Replace("\\", "\\\\");
-            Console.Write(String.Format("\"CmdPath\": \"{0}\"\n", cmd));
+            Console.Write(String.Format("\"MSBuild\": {0},\n", MSBuild));
+            Console.Write(String.Format("\"VCTools\": {0},\n", VCTools));
+            Console.Write(String.Format("\"SDK8\": {0},\n", Win8SDK));
+            Console.Write(String.Format("\"SDK\": {0},\n", sdk10Ver));
+            Console.Write(String.Format("\"Packages\": [\n{0}\n]", String.Join(",\n", packs.ToArray())));
             Console.Write("}");
         }
     }
