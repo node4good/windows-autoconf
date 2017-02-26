@@ -1,5 +1,6 @@
 ﻿// powershell -ExecutionPolicy Unrestricted -Version "2.0" -Command "&{ Add-Type -Path Program.cs; [VisualStudioConfiguration.Program]::Main(@())}"
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 namespace VisualStudioConfiguration
@@ -112,6 +113,7 @@ namespace VisualStudioConfiguration
         [return: MarshalAs(UnmanagedType.VariantBool)]
         bool IsComplete();
 
+        [return: MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_UNKNOWN)]
         ISetupPropertyStore GetProperties();
 
         [return: MarshalAs(UnmanagedType.BStr)]
@@ -177,6 +179,13 @@ namespace VisualStudioConfiguration
 
     public static class Main
     {
+
+        public static void Echo(string tmplt, params Object[] args)
+        {
+            string str = (args.Length > 0) ? String.Format(tmplt, args) : tmplt;
+            Console.Write(' ' + str + '\n');
+        }
+
         public static void Query()
         {
 			ISetupConfiguration query = new SetupConfiguration();
@@ -184,47 +193,66 @@ namespace VisualStudioConfiguration
 			IEnumSetupInstances e = query2.EnumAllInstances();
 			ISetupInstance2[] rgelt = new ISetupInstance2[1];
 			int pceltFetched;
-            Console.Write("[");
+            Echo("[");
             e.Next(1, rgelt, out pceltFetched);
 			while (pceltFetched > 0)
 			{
                 PrintInstance(rgelt[0]);
                 e.Next(1, rgelt, out pceltFetched);
 				if (pceltFetched > 0)
-				    Console.Write(",");
+				    Echo(",");
 			}
-            Console.Write("]");
+            Echo("]");
         }
 
         private static void PrintInstance(ISetupInstance2 setupInstance2)
         {
-            Console.Write("{\n");
+            Echo("{");
             string[] prodParts = setupInstance2.GetProduct().GetId().Split('.');
             Array.Reverse(prodParts);
             string prod = prodParts[0];
             string instPath = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
-            Console.Write(String.Format("\"Product\": \"{0}\",\n", prod));
-            Console.Write(String.Format("\"InstallationPath\": \"{0}\",\n", instPath));
-            Console.Write(String.Format("\"Version\": \"{0}\",\n", setupInstance2.GetInstallationVersion()));
+            string installationVersion = setupInstance2.GetInstallationVersion();
+            Echo("\"Product\": \"{0}\",", prod);
+            Echo("\"Version\": \"{0}\",", installationVersion);
+            Echo("\"InstallationPath\": \"{0}\",", instPath);
+            String cmd = (instPath + "\\\\Common7\\\\Tools\\\\VsDevCmd.bat");
+            Echo("\"CmdPath\": \"{0}\",", cmd);
+
+            List<string> packs = new List<String>();
+            string MSBuild = "false";
+            string VCTools = "false";
+            string Win8SDK = "false";
+            string sdk10Ver = "false";
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
-                if (package.GetType() != "Exe") continue;
                 string id = package.GetId();
-                if (id.IndexOf("SDK", StringComparison.Ordinal) == -1) continue;
-                string[] parts = id.Split('_');
-                if (parts.Length < 2) continue;
-                string sdkVer = parts[1];
-                char[] chars = {'1', '0', '8'};
-                if (sdkVer.IndexOfAny(chars) == -1) continue;
-                Console.Write(String.Format("\"SDKFull\": \"{0}\",\n", sdkVer));
-                string[] sdkParts = sdkVer.Split('.');
-                sdkParts[sdkParts.Length - 1] = "0";
-                Console.Write(String.Format("\"SDK\": \"{0}\",\n", String.Join(".", sdkParts)));
+                string detail = "{\"id\": \"" + id + "\", \"version\":\"" + package.GetVersion() + "\"}";
+                packs.Add("    " + detail);
+
+                if (id.Contains("Component.MSBuild")) {
+                    MSBuild = detail;
+                } else if (id.Contains("VC.Tools")) {
+                    VCTools = detail;
+                } else if (id.Contains("SDK")) {
+                    string[] parts = id.Split('_');
+                    if (parts.Length < 2) continue;
+                    string sdkVer = parts[1];
+                    if (sdkVer.Contains("8")) {
+                        Win8SDK = detail;
+                    } else if (sdkVer.Contains("10")) {
+                        string[] sdk10Parts = sdkVer.Split('.');
+                        sdk10Parts[sdk10Parts.Length - 1] = "0";
+                        sdk10Ver = '"' + String.Join(".", sdk10Parts) + '"';
+                    }
+                }
             }
-            String cmd = (setupInstance2.GetInstallationPath() + "\\Common7\\Tools\\VsDevCmd.bat");
-            cmd = cmd.Replace("\\", "\\\\");
-            Console.Write(String.Format("\"CmdPath\": \"{0}\"\n", cmd));
-            Console.Write("}");
+            Echo("\"MSBuild\": {0},", MSBuild);
+            Echo("\"VCTools\": {0},", VCTools);
+            Echo("\"SDK8\": {0},", Win8SDK);
+            Echo("\"SDK\": {0},", sdk10Ver);
+            Echo("\"Packages\": [\n {0} \n ]", String.Join(",\n", packs.ToArray()));
+            Echo("}");
         }
     }
 

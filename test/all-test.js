@@ -36,7 +36,7 @@ describe('Try cmd tools', () => {
     })
 
     it('Powershell -Version 2', () => {
-      const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\Get-VS7.cs').replace('"', '')
+      const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\GetVS2017Configuration.cs').replace('"', '')
       const cmd = `"powershell.exe" -Version 2 -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
       const ret = execSync(cmd).toString()
       const setup = JSON.parse(ret)[0]
@@ -72,6 +72,17 @@ describe('Try cmd tools', () => {
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
   })
+
+  it('SDK Registry', () => {
+    const ret = execSync(getter.try_registry_sdk_path).toString()
+    const setup = JSON.parse(ret).find(s => s['ProductName'].includes('Windows SDK for Windows 10'))
+    if (!setup) {
+      console.log('registry method failed')
+      return
+    }
+    assert(setup['InstallationFolder'])
+    assert(setup['ProductVersion'])
+  })
 })
 
 describe('Try cmd tools in a weird path', () => {
@@ -98,24 +109,22 @@ describe('Try cmd tools in a weird path', () => {
     })
 
     it('Powershell', () => {
-      const setup = getter._forTesting.tryVS7Powershell()
+      const setup = getter._forTesting.tryVS2017Powershell()
       if (setup === 'No COM') return
 
       assert(setup.Product)
       assert(setup.InstallationPath)
       assert(setup.Version)
-      assert(setup.SDKFull)
       assert(setup.SDK)
       assert(setup.CmdPath)
       assert(fs.existsSync(setup.CmdPath))
     })
 
     it('Compile and run', () => {
-      const setup = getter._forTesting.tryVS7CSC()
+      const setup = getter._forTesting.tryVS2017CSC()
       assert(setup.Product)
       assert(setup.InstallationPath)
       assert(setup.Version)
-      assert(setup.SDKFull)
       assert(setup.SDK)
       assert(setup.CmdPath)
       assert(fs.existsSync(setup.CmdPath))
@@ -124,7 +133,7 @@ describe('Try cmd tools in a weird path', () => {
 
   it('Registry', function () {
     this.timeout(10000)
-    const setup = getter._forTesting.tryVS7Registry()
+    const setup = getter._forTesting.tryVS2017Registry()
     if (!setup) {
       console.log('registry method failed')
       return
@@ -136,6 +145,17 @@ describe('Try cmd tools in a weird path', () => {
     assert(setup.Version)
     assert(setup.SDKFull)
     assert(setup.SDK)
+  })
+
+  it('Registry SDK', function () {
+    this.timeout(10000)
+    const setup = getter._forTesting.tryRegistrySDK()
+    if (!setup) {
+      console.log('registry method failed')
+      return
+    }
+    assert(setup['InstallationFolder'])
+    assert(setup['ProductVersion'])
   })
 
   after(() => {
