@@ -67,7 +67,7 @@ function execAndParse (cmd) {
   const err = ['ERROR', log, ret]
   if (ret.includes('ERROR')) return err
   try {
-    const setup = JSON.parse(ret || '[]')
+    const setup = JSON.parse(ret)
     setup.log = log
     return setup
   } catch (e) {
@@ -81,6 +81,7 @@ function execAndParse (cmd) {
 }
 
 function checkSetup (setups) {
+  if (setups && setups[0] === 'No COM') return
   setups.sort((a, b) => a.Version.localeCompare(b.Version)).reverse()
   const setup = setups.find(s => s.MSBuild && s.VCTools && (s.SDK || s.SDK8))
   return setup
@@ -152,8 +153,7 @@ function tryRegistryMSBuild () {
 
 function getVS2017Setup () {
   if ('cache2017' in getVS2017Setup) return getVS2017Setup.cache2017
-  const vsSetupViaCom = tryVS2017Powershell() || tryVS2017CSC()
-  const vsSetup = (vsSetupViaCom === 'No COM') ? tryVS2017Registry() : vsSetupViaCom
+  const vsSetup = tryVS2017Powershell() || tryVS2017CSC() || tryVS2017Registry()
   getVS2017Setup.cache2017 = vsSetup
   return vsSetup
 }

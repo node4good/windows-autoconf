@@ -12,24 +12,27 @@ const execSync = require('child_process').execSync
 const getter = require('../')
 
 const prods = new Set(['BuildTools', 'Enterprise', 'Professional', 'Community'])
+function checkCom() {
+  let ret
+  try {
+    ret = execSync(getter.check_VS2017_COM_path).toString()
+  } catch (e) {
+    console.error(e)
+    assert.equal(e.status, 1)
+    ret = e.output[1].toString().trim()
+    assert.equal(ret, '"No COM"')
+  }
+  const setup = JSON.parse(ret)
+  if (setup === 'No COM') {
+    this.skip()
+  } else {
+    assert.equal(setup, 'COM Ok')
+  }
+}
 
 describe('Try cmd tools', () => {
   describe('Try COM', () => {
-    before(function () {
-      let ret
-      try {
-        ret = execSync(getter.check_VS2017_COM_path).toString()
-      } catch (e) {
-        if (e.status === 1 && e.output[1].toString() === 'No COM') return this.skip()
-        throw e
-      }
-      const setup = JSON.parse(ret)
-      if (setup === 'No COM') {
-        this.skip()
-      } else {
-        assert.equal(setup, 'COM Ok')
-      }
-    })
+    before(checkCom)
 
     it('Powershell', () => {
       const ret = getter._forTesting.execAndParse(getter.try_powershell_path)
@@ -108,21 +111,7 @@ describe('Try cmd tools in a weird path', () => {
   })
 
   describe('Try COM', () => {
-    before(function () {
-      let ret
-      try {
-        ret = execSync(getter.check_VS2017_COM_path).toString()
-      } catch (e) {
-        if (e.status === 1 && e.output[1].toString() === 'No COM') return this.skip()
-        throw e
-      }
-      const setup = JSON.parse(ret)
-      if (setup === 'No COM') {
-        this.skip()
-      } else {
-        assert.equal(setup, 'COM Ok')
-      }
-    })
+    before(checkCom)
 
     it('Powershell', () => {
       const setup = getter._forTesting.tryVS2017Powershell()
