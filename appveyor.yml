@@ -18,6 +18,8 @@ install:
   - npm link
   - git clone https://github.com/node4good/gyp.js.git
   - cd gyp.js & npm link windows-autoconf & npm i --dev
+  - git clone git@github.com:refack/node-gyp.git
+  - cd node-gyp & npm link windows-autoconf & npm i --dev
 
 # Post-install test scripts.
 test_script:
@@ -27,6 +29,7 @@ test_script:
   # run tests
   - npm test
   - cd gyp.js & mocha
+  - cd node-gyp & npm test
 
 # Don't actually build.
 build: off
