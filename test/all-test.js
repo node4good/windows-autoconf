@@ -152,7 +152,7 @@ describe('Try cmd tools in a weird path', () => {
     const setup = getter._forTesting.tryVS2017Registry()
     if (!setup) {
       console.log('registry method failed')
-      return
+      return this.skip()
     }
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)

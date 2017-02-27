@@ -106,8 +106,8 @@ function tryVS2017CSC () {
 
 function tryVS2017Registry () {
   try {
-    const vsSetupsRaw = execAndParse(module.exports.compile_run_path)
-    if (vsSetupsRaw[0].includes('ERROR')) {
+    const vsSetupsRaw = execAndParse(module.exports.try_registry_path)
+    if (vsSetupsRaw[0] === 'ERROR') {
       lazy.bindings.log('Couldn\'t find VS2017 in registry:(')
       return
     }
