@@ -1,12 +1,13 @@
 # Test against the latest version of this Node.js version
 environment:
   nodejs_version: "7"
-  DEBUG: "autoconf,gyp.js"
   matrix:
     - GYP_MSVS_VERSION: "2010"
     - GYP_MSVS_VERSION: "2012"
     - GYP_MSVS_VERSION: "2013"
     - GYP_MSVS_VERSION: "2015"
+  NPM_TOKEN:
+    secure: p6I7IcfVWhufrMLBwgQ2OQgMA/65tmLwryPmVr+zbRGpSUB/Kq/JPP/MSWmPNutQ
 
 
 # Install scripts. (runs after repo cloning)
@@ -14,22 +15,38 @@ install:
   # Get the latest stable version of Node.js or io.js
   - ps: Install-Product node $env:nodejs_version
   # install modules
-  - npm -g install mocha
-  - npm link
-  - git clone https://github.com/node4good/gyp.js.git
-  - cd gyp.js & npm link windows-autoconf & npm i --dev
-  - git clone git@github.com:refack/node-gyp.git
-  - cd node-gyp & npm link windows-autoconf & npm i --dev
+  - cmd: >-
+      npm -g install mocha
+
+      npm link
+
+      cd C:\projects & git clone https://github.com/node4good/gyp.js.git
+
+      cd C:\projects\gyp.js & npm link windows-autoconf & npm i
+
+      cd C:\projects & git clone https://github.com/refack/node-gyp.git
+
+      cd C:\projects\node-gyp & npm link windows-autoconf & npm i
 
 # Post-install test scripts.
 test_script:
-  # Output useful info for debugging.
-  - node --version
-  - npm --version
-  # run tests
-  - npm test
-  - cd gyp.js & mocha
-  - cd node-gyp & npm test
+- cmd: >-
+    cd C:\projects\windows-autoconf & npm test
+
+- cmd: >-
+    cd C:\projects\node-gyp & npm test --verbose
+
+- cmd: >-
+    cd C:\projects\gyp.js & mocha
+
+deploy_script:
+- cmd: >-
+    cd C:\projects\windows-autoconf
+
+    npm config set "//registry.npmjs.org/:_authToken=%NPM_TOKEN%" -q
+
+    IF %APPVEYOR_REPO_TAG%==true IF %GYP_MSVS_VERSION%==2015 npm publish
+
 
 # Don't actually build.
 build: off
