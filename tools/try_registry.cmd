@@ -7,7 +7,7 @@ ECHO     ]
 GOTO :eof
 
 :print
-IF %FLIP%==1 ECHO ,{
+IF %FLIP%==1 ECHO     ,{
 IF %FLIP%==0 (
 SET FLIP=1
 ECHO     {
