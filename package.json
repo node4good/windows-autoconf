@@ -1,9 +1,11 @@
 {
   "name": "windows-autoconf",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Try to find MS build tools",
   "main": "index.js",
-  "os": [ "win32" ],
+  "os": [
+    "win32"
+  ],
   "dependencies": {},
   "devDependencies": {},
   "scripts": {
