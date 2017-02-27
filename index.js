@@ -117,7 +117,7 @@ function tryVS2017Registry () {
     lazy.debugDir(vsSetup)
     if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
 
-    const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" /nologo & set`).toString().trim().split(/\r?\n/g)
+    const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" -no_logo & set`).toString().trim().split(/\r?\n/g)
     vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
     vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, '$1')
     vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
@@ -139,6 +139,17 @@ function tryRegistrySDK () {
   }
 }
 
+function tryRegistryMSBuild () {
+  try {
+    const msbSetups = execAndParse(module.exports.try_registry_msbuild_path)
+    const vers = msbSetups.map(s => s['ver']).sort().reverse()
+    const msbSetup = msbSetups.find(s => s['ver'] === vers[0])
+    return msbSetup
+  } catch (e) {
+    lazy.bindings.log('Couldn\'t find any SDK in registry')
+  }
+}
+
 function getVS2017Setup () {
   if ('cache2017' in getVS2017Setup) return getVS2017Setup.cache2017
   const vsSetupViaCom = tryVS2017Powershell() || tryVS2017CSC()
@@ -148,11 +159,21 @@ function getVS2017Setup () {
 }
 
 function locateMsbuild () {
+  const msbSetup = locateMSBuild2017() || tryRegistryMSBuild()
+  if (!msbSetup) {
+    lazy.bindings.log('Can\'t find "msbuild.exe"')
+    return
+  }
+  return msbSetup.MSBuildPath
+}
+
+function locateMSBuild2017 () {
   const vsSetup = getVS2017Setup()
-  const msbuildLocation = lazy.bindings.path.join(
-    vsSetup.InstallationPath, 'MSBuild', '15.0', 'Bin', 'MSBuild.exe'
-  )
-  return msbuildLocation
+  if (!vsSetup) return
+  const ver = '15.0'
+  const MSBuildToolsPath = lazy.bindings.path.join(vsSetup.InstallationPath, 'MSBuild', ver, 'Bin')
+  const MSBuildPath = lazy.bindings.path.join(MSBuildToolsPath, 'MSBuild.exe')
+  return {ver, MSBuildToolsPath, MSBuildPath}
 }
 
 function getMSVSSetup (version) {
@@ -292,14 +313,24 @@ module.exports = {
   compile_run_path: `"${__dirname}\\tools\\compile-run.cmd"`,
   try_registry_path: `"${__dirname}\\tools\\try_registry.cmd"`,
   try_registry_sdk_path: `"${__dirname}\\tools\\try_registry_sdk.cmd"`,
+  try_registry_msbuild_path: `"${__dirname}\\tools\\try_registry_msbuild.cmd"`,
   check_VS2017_COM_path: `"${__dirname}\\tools\\check_VS2017_COM.cmd"`,
   setBindings,
   getVS2017Setup,
   getVS2017Path: (_, arch) => findVcVarsFile(arch),
   locateMsbuild,
+  locateMSBuild2017,
   getMSVSVersion: (version) => getMSVSSetup(version).version,
   getOSBits,
   findOldVcVarsFile: (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
-  _forTesting: {tryVS2017Powershell, tryVS2017CSC, tryVS2017Registry, tryRegistrySDK, getWithFullCmd, execAndParse}
+  _forTesting: {
+    tryVS2017Powershell,
+    tryVS2017CSC,
+    tryVS2017Registry,
+    tryRegistrySDK,
+    tryRegistryMSBuild,
+    getWithFullCmd,
+    execAndParse
+  }
 }

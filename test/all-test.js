@@ -174,6 +174,23 @@ describe('Try cmd tools in a weird path', () => {
     assert(setup['ProductVersion'])
   })
 
+  it('Registry MSBuild', function () {
+    this.timeout(10000)
+    const msbSetup = getter._forTesting.tryRegistryMSBuild()
+    if (!msbSetup) {
+      console.log('registry method failed')
+      return this.skip()
+    }
+    assert(msbSetup.ver)
+    assert(msbSetup.MSBuildToolsPath)
+    assert(fs.existsSync(msbSetup.MSBuildToolsPath))
+    assert(msbSetup.MSBuildPath)
+    const parts = msbSetup.MSBuildPath.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop() === 'MSBuild.exe')
+    assert(fs.existsSync(msbSetup.MSBuildPath))
+  })
+
   after(() => {
     const pathParts = weirdDir.split('\\')
     const i = pathParts.lastIndexOf('.tmp')
@@ -197,6 +214,7 @@ describe('Try node wrapper', function () {
     const version = getter.getMSVSVersion()
     assert.equal(version, process.env['GYP_MSVS_VERSION'] || '2017')
   })
+
   describe('2017 only', function () {
     before(function () {
       const version = getter.getMSVSVersion()
@@ -236,12 +254,16 @@ describe('Try node wrapper', function () {
       assert(fs.existsSync(vsSetup.CmdPath))
     })
 
-    it('locateMsbuild', () => {
-      const path = getter.locateMsbuild()
-      const parts = path.split('\\')
+    it('locateMSBuild2017', () => {
+      const msbSetup = getter.locateMSBuild2017()
+      assert.equal(msbSetup.ver, '15.0')
+      assert(msbSetup.MSBuildToolsPath)
+      assert(fs.existsSync(msbSetup.MSBuildToolsPath))
+      assert(msbSetup.MSBuildPath)
+      const parts = msbSetup.MSBuildPath.split('\\')
       assert(parts.length >= 4)
-      assert(path.match(/MSBuild\.exe$/i))
-      assert(fs.existsSync(path))
+      assert(parts.pop() === 'MSBuild.exe')
+      assert(fs.existsSync(msbSetup.MSBuildPath))
     })
   })
 
@@ -285,6 +307,15 @@ describe('Try node wrapper', function () {
     assert(parts.pop().match(/vs|vars/i))
     assert(fs.existsSync(cmd))
   })
+
+  it('locateMsbuild', () => {
+    const msbPath = getter.locateMsbuild()
+    const parts = msbPath.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop() === 'MSBuild.exe')
+    assert(fs.existsSync(msbPath))
+  })
+
 })
 
 describe('genEnvironment', function () {
