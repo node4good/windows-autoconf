@@ -16,16 +16,24 @@ const prods = new Set(['BuildTools', 'Enterprise', 'Professional', 'Community'])
 describe('Try cmd tools', () => {
   describe('Try COM', () => {
     before(function () {
-      const ret = execSync(getter.try_powershell_path).toString()
-      const setup = JSON.parse(ret)[0]
+      let ret
+      try {
+        ret = execSync(getter.check_VS2017_COM_path).toString()
+      } catch (e) {
+        if (e.status === 1 && e.output[1].toString() === 'No COM') return this.skip()
+        throw e
+      }
+      const setup = JSON.parse(ret)
       if (setup === 'No COM') {
         this.skip()
+      } else {
+        assert.equal(setup, 'COM Ok')
       }
     })
 
     it('Powershell', () => {
-      const ret = execSync(getter.try_powershell_path).toString()
-      const setup = JSON.parse(ret)[0]
+      const ret = getter._forTesting.execAndParse(getter.try_powershell_path)
+      const setup = ret[0]
       if (setup === 'No COM') return
       assert(setup.Product)
       assert(setup.InstallationPath)
@@ -38,8 +46,8 @@ describe('Try cmd tools', () => {
     it('Powershell -Version 2', () => {
       const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\GetVS2017Configuration.cs').replace('"', '')
       const cmd = `"powershell.exe" -Version 2 -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
-      const ret = execSync(cmd).toString()
-      const setup = JSON.parse(ret)[0]
+      const ret = getter._forTesting.execAndParse(cmd)
+      const setup = ret[0]
       if (setup === 'No COM') return
       assert(setup.Product)
       assert(setup.InstallationPath)
@@ -50,8 +58,8 @@ describe('Try cmd tools', () => {
     })
 
     it('Compile and run', () => {
-      const ret = execSync(getter.compile_run_path).toString()
-      const setup = JSON.parse(ret)[0]
+      const ret = getter._forTesting.execAndParse(getter.compile_run_path)
+      const setup = ret[0]
       assert(setup.Product)
       assert(setup.InstallationPath)
       assert(setup.Version)
@@ -62,8 +70,8 @@ describe('Try cmd tools', () => {
   })
 
   it('Registry', () => {
-    const ret = execSync(getter.try_registry_path).toString()
-    const setup = JSON.parse(ret).find(s => s.RegistryVersion === '15.0')
+    const ret = getter._forTesting.execAndParse(getter.try_registry_path)
+    const setup = ret.find(s => s.RegistryVersion === '15.0')
     if (!setup) {
       console.log('registry method failed')
       return
@@ -74,8 +82,8 @@ describe('Try cmd tools', () => {
   })
 
   it('SDK Registry', () => {
-    const ret = execSync(getter.try_registry_sdk_path).toString()
-    const setup = JSON.parse(ret).find(s => s['ProductName'].includes('Windows SDK for Windows 10'))
+    const ret = getter._forTesting.execAndParse(getter.try_registry_sdk_path)
+    const setup = ret.find(s => s['ProductName'].includes('Windows SDK for Windows 10'))
     if (!setup) {
       console.log('registry method failed')
       return
@@ -101,10 +109,18 @@ describe('Try cmd tools in a weird path', () => {
 
   describe('Try COM', () => {
     before(function () {
-      const ret = execSync(getter.try_powershell_path).toString()
-      const setup = JSON.parse(ret)[0]
+      let ret
+      try {
+        ret = execSync(getter.check_VS2017_COM_path).toString()
+      } catch (e) {
+        if (e.status === 1 && e.output[1].toString() === 'No COM') return this.skip()
+        throw e
+      }
+      const setup = JSON.parse(ret)
       if (setup === 'No COM') {
         this.skip()
+      } else {
+        assert.equal(setup, 'COM Ok')
       }
     })
 

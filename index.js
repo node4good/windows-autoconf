@@ -2,12 +2,16 @@
 /**
  * @namespace vsSetup
  * @property {String} Product
- * @property {String} InstallationPath
- * @property {String} SDKFull
- * @property {String} SDK
- * @property {String} CmdPath
  * @property {String} Version
- * @property {String} RegistryVersion
+ * @property {Boolean} IsComplete
+ * @property {Boolean} IsLaunchable
+ * @property {String} CmdPath
+ * @property {Object} MSBuild
+ * @property {Object} VCTools
+ * @property {Boolean} SDK8
+ * @property {Object} SDK
+ * @property {Array} Packages
+ * @property {?String} RegistryVersion
  */
 /**
  * @namespace lazy.bindings.fs.mkdirpSync
@@ -56,20 +60,36 @@ function setBindings (bindings) {
   lazy._bindings = bindings
 }
 
-function execAndParse (cmd, skipFilter = false) {
-  const ret = lazy.bindings.execSync(cmd)
-    .toString()
-    .split(/\r?\n/g)
-    .filter(l => skipFilter || l[0] === ' ')
-    .join('')
-  if (ret.includes('ERROR')) return ['ERROR']
-  return JSON.parse(ret || '[]')
+function execAndParse (cmd) {
+  const lines = lazy.bindings.execSync(cmd).toString().split(/\r?\n/g)
+  const ret = lines.filter(l => l.slice(0, 4) === '    ').join('')
+  const log = lines.filter(l => l.slice(0, 4) !== '    ').join('')
+  const err = ['ERROR', log, ret]
+  if (ret.includes('ERROR')) return err
+  try {
+    const setup = JSON.parse(ret || '[]')
+    setup.log = log
+    return setup
+  } catch (e) {
+    lazy.debug('====== ret =======')
+    lazy.debug(ret)
+    lazy.debug('====== log =======')
+    lazy.debug(log)
+    lazy.debug('==================')
+    return err.concat([e])
+  }
+}
+
+function checkSetup (setups) {
+  setups.sort((a, b) => a.Version.localeCompare(b.Version)).reverse()
+  const setup = setups.find(s => s.MSBuild && s.VCTools && (s.SDK || s.SDK8))
+  return setup
 }
 
 function tryVS2017Powershell () {
   try {
     const vsSetups = execAndParse(module.exports.try_powershell_path)
-    return vsSetups[0]
+    return checkSetup(vsSetups)
   } catch (e) {
     lazy.bindings.log('Couldn\'t find VS2017 with powershell')
   }
@@ -78,7 +98,7 @@ function tryVS2017Powershell () {
 function tryVS2017CSC () {
   try {
     const vsSetups = execAndParse(module.exports.compile_run_path)
-    return vsSetups[0]
+    return checkSetup(vsSetups)
   } catch (e) {
     lazy.bindings.log('Couldn\'t find VS2017 with a compiled exe')
   }
@@ -86,11 +106,12 @@ function tryVS2017CSC () {
 
 function tryVS2017Registry () {
   try {
-    const vsSetupsRaw = execAndParse(module.exports.compile_run_path, true)
+    const vsSetupsRaw = execAndParse(module.exports.compile_run_path)
     if (vsSetupsRaw[0].includes('ERROR')) {
       lazy.bindings.log('Couldn\'t find VS2017 in registry:(')
       return
     }
+    vsSetupsRaw.sort((a, b) => a.localeCompare(b)).reverse()
     const vsSetup = vsSetupsRaw.find(i => Number(i.RegistryVersion) === 15.0)
     if (!vsSetup) return
     lazy.debugDir(vsSetup)
@@ -109,7 +130,7 @@ function tryVS2017Registry () {
 
 function tryRegistrySDK () {
   try {
-    const sdkSetups = execAndParse(module.exports.try_registry_sdk_path, true)
+    const sdkSetups = execAndParse(module.exports.try_registry_sdk_path)
     const vers = sdkSetups.map(s => s['ProductVersion']).sort().reverse()
     const sdkSetup = sdkSetups.find(s => s['ProductVersion'] === vers[0])
     return sdkSetup
@@ -271,6 +292,7 @@ module.exports = {
   compile_run_path: `"${__dirname}\\tools\\compile-run.cmd"`,
   try_registry_path: `"${__dirname}\\tools\\try_registry.cmd"`,
   try_registry_sdk_path: `"${__dirname}\\tools\\try_registry_sdk.cmd"`,
+  check_VS2017_COM_path: `"${__dirname}\\tools\\check_VS2017_COM.cmd"`,
   setBindings,
   getVS2017Setup,
   getVS2017Path: (_, arch) => findVcVarsFile(arch),
@@ -279,5 +301,5 @@ module.exports = {
   getOSBits,
   findOldVcVarsFile: (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
-  _forTesting: {tryVS2017Powershell, tryVS2017CSC, tryVS2017Registry, tryRegistrySDK, getWithFullCmd}
+  _forTesting: {tryVS2017Powershell, tryVS2017CSC, tryVS2017Registry, tryRegistrySDK, getWithFullCmd, execAndParse}
 }

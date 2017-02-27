@@ -183,7 +183,7 @@ namespace VisualStudioConfiguration
         public static void Echo(string tmplt, params Object[] args)
         {
             string str = (args.Length > 0) ? String.Format(tmplt, args) : tmplt;
-            Console.Write(' ' + str + '\n');
+            Console.Write("    " + str + '\n');
         }
 
         public static void Query()
@@ -213,45 +213,49 @@ namespace VisualStudioConfiguration
             string prod = prodParts[0];
             string instPath = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
             string installationVersion = setupInstance2.GetInstallationVersion();
+            bool isComplete = setupInstance2.IsComplete();
+            bool isLaunchable = setupInstance2.IsLaunchable();
             Echo("\"Product\": \"{0}\",", prod);
             Echo("\"Version\": \"{0}\",", installationVersion);
             Echo("\"InstallationPath\": \"{0}\",", instPath);
+            Echo("\"IsComplete\": \"{0}\",", isComplete ? "true" : "false");
+            Echo("\"IsLaunchable\": \"{0}\",", isLaunchable ? "true" : "false");
             String cmd = (instPath + "\\\\Common7\\\\Tools\\\\VsDevCmd.bat");
             Echo("\"CmdPath\": \"{0}\",", cmd);
 
             List<string> packs = new List<String>();
             string MSBuild = "false";
             string VCTools = "false";
-            string Win8SDK = "false";
-            string sdk10Ver = "false";
+            string Win8SDK = "0";
+            string sdk10Ver = "0";
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
                 string id = package.GetId();
-                string detail = "{\"id\": \"" + id + "\", \"version\":\"" + package.GetVersion() + "\"}";
+                string ver = package.GetVersion();
+                string detail = "{\"id\": \"" + id + "\", \"version\":\"" + ver + "\"}";
                 packs.Add("    " + detail);
 
                 if (id.Contains("Component.MSBuild")) {
                     MSBuild = detail;
                 } else if (id.Contains("VC.Tools")) {
                     VCTools = detail;
-                } else if (id.Contains("SDK")) {
-                    string[] parts = id.Split('_');
-                    if (parts.Length < 2) continue;
-                    string sdkVer = parts[1];
-                    if (sdkVer.Contains("8")) {
-                        Win8SDK = detail;
-                    } else if (sdkVer.Contains("10")) {
-                        string[] sdk10Parts = sdkVer.Split('.');
-                        sdk10Parts[sdk10Parts.Length - 1] = "0";
-                        sdk10Ver = '"' + String.Join(".", sdk10Parts) + '"';
-                    }
+                } else if (id.Contains("Microsoft.Windows.81SDK")) {
+                    if (Win8SDK.CompareTo(ver) > 0) continue;
+                    Win8SDK = ver;
+                } else if (id.Contains("Win10SDK_10")) {
+                    if (sdk10Ver.CompareTo(ver) > 0) continue;
+                    sdk10Ver = ver;
                 }
             }
+            packs.Sort();
+            string[] sdk10Parts = sdk10Ver.Split('.');
+            sdk10Parts[sdk10Parts.Length - 1] = "0";
             Echo("\"MSBuild\": {0},", MSBuild);
             Echo("\"VCTools\": {0},", VCTools);
-            Echo("\"SDK8\": {0},", Win8SDK);
-            Echo("\"SDK\": {0},", sdk10Ver);
-            Echo("\"Packages\": [\n {0} \n ]", String.Join(",\n", packs.ToArray()));
+            Echo("\"SDK8\": \"{0}\",", Win8SDK);
+            Echo("\"SDK10\": \"{0}\",", sdk10Ver);
+            Echo("\"SDK\": \"{0}\",", String.Join(".", sdk10Parts));
+            Echo("\"Packages\": [\n    {0}    \n    ]", String.Join(",\n    ", packs.ToArray()));
             Echo("}");
         }
     }
