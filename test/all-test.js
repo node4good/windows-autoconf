@@ -313,6 +313,15 @@ describe('Try node wrapper', function () {
     assert(fs.existsSync(msbPath))
   })
 
+  it('locateMsbuild(2017)', function () {
+    const msbPath = getter.locateMsbuild(2017)
+    if (!msbPath) this.skip()
+    const parts = msbPath.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop() === 'MSBuild.exe')
+    assert(fs.existsSync(msbPath))
+  })
+
   it('locateMsbuild(4)', () => {
     const msbPath = getter.locateMsbuild(4)
     const parts = msbPath.split('\\')

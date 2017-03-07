@@ -160,7 +160,9 @@ function getVS2017Setup () {
 }
 
 function locateMsbuild (ver) {
-  const msbSetup = (ver && (ver in {2017: 1, auto: 1}) && locateMSBuild2017()) || tryRegistryMSBuild(ver)
+  ver = ver || 'auto'
+  const msbSetup = ((ver in {2017: 1, auto: 1}) && locateMSBuild2017()) ||
+    tryRegistryMSBuild(ver)
   if (!msbSetup) {
     lazy.bindings.log('Can\'t find "msbuild.exe"')
     return
