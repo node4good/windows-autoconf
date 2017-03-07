@@ -12,7 +12,7 @@ const execSync = require('child_process').execSync
 const getter = require('../')
 
 const prods = new Set(['BuildTools', 'Enterprise', 'Professional', 'Community'])
-function checkCom() {
+function checkCom () {
   let ret
   try {
     ret = execSync(getter.check_VS2017_COM_path).toString()
@@ -48,7 +48,7 @@ describe('Try cmd tools', () => {
 
     it('Powershell -Version 2', () => {
       const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\GetVS2017Configuration.cs').replace('"', '')
-      const cmd = `"powershell.exe" -Version 2 -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
+      const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
       const ret = getter._forTesting.execAndParse(cmd)
       const setup = ret[0]
       if (setup === 'No COM') return

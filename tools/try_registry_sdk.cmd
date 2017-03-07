@@ -1,6 +1,7 @@
 :: proper output starts with '    ' so we can filter debug output, but stay JSON transparent
 @IF NOT DEFINED DEBUG_GETTER @ECHO OFF
 SETLOCAL
+SET PROMPT=$G
 SET FLIP=0
 SET BASE_KEY=HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows
 ECHO     [

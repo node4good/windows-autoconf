@@ -1,5 +1,7 @@
 :: proper output starts with '    ' so we can filter debug output, but stay JSON transparent
 @IF NOT DEFINED DEBUG_GETTER @ECHO OFF
+SETLOCAL
+SET PROMPT=$G
 SET FLIP=0
 ECHO     [
 FOR /F "delims=XXX skip=2" %%I IN ('reg query HKLM\Software\Microsoft\VisualStudio\SxS\VS7 /reg:32') DO CALL :print "%%I"

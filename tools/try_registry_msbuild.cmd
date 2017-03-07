@@ -1,6 +1,7 @@
 :: proper output starts with '    ' so we can filter debug output, but stay JSON transparent
 @IF NOT DEFINED DEBUG_GETTER @ECHO OFF
 SETLOCAL
+SET PROMPT=$G
 SET FLIP=0
 SET BASE_KEY=HKEY_LOCAL_MACHINE\Software\Microsoft\MSBuild\ToolsVersions
 ECHO     [
@@ -19,9 +20,8 @@ ECHO     {
 SET PARAM=%~1
 SETLOCAL
 SET FLIP2=0
-SET DELIMED1=%PARAM:HKEY_LOCAL_MACHINE\Software\Microsoft\MSBuild\ToolsVersions\=%
-SET DELIMED1=%DELIMED1:\=\\%
-ECHO     "ver":"%DELIMED1%"
+SET TRUNCVER=%PARAM:HKEY_LOCAL_MACHINE\Software\Microsoft\MSBuild\ToolsVersions\=%
+FOR /F "delims=. tokens=1,2" %%A IN ("%TRUNCVER%") DO ECHO     "ver":%%A.%%B
 FOR /F "delims=XXX skip=2" %%I IN ('reg query %1 /v /e /f MSBuildToolsPath /reg:32') DO CALL :print "%%I"
 ECHO     }
 EXIT /B
