@@ -305,6 +305,22 @@ describe('Try node wrapper', function () {
     assert(fs.existsSync(msbPath))
   })
 
+  it('locateMsbuild(auto)', () => {
+    const msbPath = getter.locateMsbuild('auto')
+    const parts = msbPath.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop() === 'MSBuild.exe')
+    assert(fs.existsSync(msbPath))
+  })
+
+  it('locateMsbuild(4)', () => {
+    const msbPath = getter.locateMsbuild(4)
+    const parts = msbPath.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop() === 'MSBuild.exe')
+    assert(msbPath.includes('\\v4.'))
+    assert(fs.existsSync(msbPath))
+  })
 })
 
 describe('genEnvironment', function () {

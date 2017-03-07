@@ -140,11 +140,12 @@ function tryRegistrySDK () {
   }
 }
 
-function tryRegistryMSBuild () {
+function tryRegistryMSBuild (ver) {
   try {
     const msbSetups = execAndParse(module.exports.try_registry_msbuild_path)
-    const vers = msbSetups.map(s => s['ver']).sort().reverse()
-    const msbSetup = msbSetups.find(s => s['ver'] === vers[0])
+    const vers = msbSetups.map(s => s['ver'])
+    ver = ver || Math.max.apply(null, vers)
+    const msbSetup = msbSetups.find(s => s['ver'] === ver)
     return msbSetup
   } catch (e) {
     lazy.bindings.log('Couldn\'t find any SDK in registry')
@@ -158,8 +159,8 @@ function getVS2017Setup () {
   return vsSetup
 }
 
-function locateMsbuild () {
-  const msbSetup = locateMSBuild2017() || tryRegistryMSBuild()
+function locateMsbuild (ver) {
+  const msbSetup = (ver && (ver in {2017: 1, auto: 1}) && locateMSBuild2017()) || tryRegistryMSBuild(ver)
   if (!msbSetup) {
     lazy.bindings.log('Can\'t find "msbuild.exe"')
     return
