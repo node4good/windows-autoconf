@@ -144,7 +144,7 @@ function tryRegistryMSBuild (ver) {
   try {
     const msbSetups = execAndParse(module.exports.try_registry_msbuild_path)
     const vers = msbSetups.map(s => s['ver'])
-    ver = ver || Math.max.apply(null, vers)
+    ver = Number(ver) || Math.max.apply(null, vers)
     const msbSetup = msbSetups.find(s => s['ver'] === ver)
     return msbSetup
   } catch (e) {
@@ -161,8 +161,7 @@ function getVS2017Setup () {
 
 function locateMsbuild (ver) {
   ver = ver || 'auto'
-  const msbSetup = ((ver in {2017: 1, auto: 1}) && locateMSBuild2017()) ||
-    tryRegistryMSBuild(ver)
+  const msbSetup = ((ver in {2017: 1, auto: 1}) && locateMSBuild2017()) || tryRegistryMSBuild(ver)
   if (!msbSetup) {
     lazy.bindings.log('Can\'t find "msbuild.exe"')
     return

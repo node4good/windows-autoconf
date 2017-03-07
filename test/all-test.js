@@ -17,7 +17,6 @@ function checkCom () {
   try {
     ret = execSync(getter.check_VS2017_COM_path).toString()
   } catch (e) {
-    console.error(e)
     assert.equal(e.status, 1)
     ret = e.output[1].toString().trim()
     assert.equal(ret, '"No COM"')
