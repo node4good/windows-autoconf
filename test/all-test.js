@@ -30,7 +30,9 @@ function checkCom () {
 }
 
 describe('Try cmd tools', () => {
-  describe('Try COM', () => {
+  describe('Try COM', function () {
+    this.timeout(30000)
+
     before(checkCom)
 
     it('Powershell', () => {
@@ -136,7 +138,6 @@ describe('Try cmd tools in a weird path', () => {
   })
 
   it('Registry', function () {
-    this.timeout(10000)
     const setup = getter._forTesting.tryVS2017Registry()
     if (!setup) {
       console.log('registry method failed')
@@ -152,7 +153,6 @@ describe('Try cmd tools in a weird path', () => {
   })
 
   it('Registry SDK', function () {
-    this.timeout(10000)
     const setup = getter._forTesting.tryRegistrySDK()
     if (!setup) {
       console.log('registry method failed')
@@ -163,7 +163,6 @@ describe('Try cmd tools in a weird path', () => {
   })
 
   it('Registry MSBuild', function () {
-    this.timeout(10000)
     const msbSetup = getter._forTesting.tryRegistryMSBuild()
     if (!msbSetup) {
       console.log('registry method failed')
@@ -196,11 +195,13 @@ function extractFile (str) {
 }
 
 describe('Try node wrapper', function () {
-  this.timeout(10000)
-
   it('getMSVSVersion', () => {
     const version = getter.getMSVSVersion()
-    assert.equal(version, process.env['GYP_MSVS_VERSION'] || '2017')
+    if ('GYP_MSVS_VERSION' in process.env) {
+      assert.equal(version, process.env['GYP_MSVS_VERSION'])
+    } else {
+      assert(['2010', '2012', '2013', '2015', '2015', '2017'].includes(version))
+    }
   })
 
   describe('2017 only', function () {
@@ -332,8 +333,6 @@ describe('Try node wrapper', function () {
 })
 
 describe('genEnvironment', function () {
-  this.timeout(20000)
-
   it('resolve for x64', () => {
     let env
     try {

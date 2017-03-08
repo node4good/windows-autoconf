@@ -132,8 +132,18 @@ function tryVS2017Registry () {
 function tryRegistrySDK () {
   try {
     const sdkSetups = execAndParse(module.exports.try_registry_sdk_path)
-    const vers = sdkSetups.map(s => s['ProductVersion']).sort().reverse()
-    const sdkSetup = sdkSetups.find(s => s['ProductVersion'] === vers[0])
+    lazy.debug(JSON.stringify(sdkSetups, null, '  '))
+    const vers = sdkSetups
+      .filter(s => s['InstallationFolder'])
+      .map(s => {
+        const parts = s['ProductVersion'].split('.')
+        const ver = Number(parts.shift() + '.' + parts.join(''))
+        return {ver, ProductVersion: s['ProductVersion']}
+      })
+      .sort((a, b) => a[0] - b[0])
+      .reverse()
+    lazy.debug(JSON.stringify(vers, null, '  '))
+    const sdkSetup = sdkSetups.find(s => s['ProductVersion'] === vers[0].ProductVersion)
     return sdkSetup
   } catch (e) {
     lazy.bindings.log('Couldn\'t find any SDK in registry')
