@@ -144,43 +144,51 @@ describe('Try cmd tools in a weird path', () => {
     })
   })
 
-  it('Registry', function () {
-    const setup = getter._forTesting.tryVS2017Registry()
-    if (!setup) return this.skip()
+  describe('Registry scripts', function () {
+    before(function () {
+      this.regSetup = getter._forTesting.tryVS2017Registry()
+      if (!this.regSetup) return this.skip()
+    })
 
-    assert(setup.RegistryVersion)
-    assert(setup.InstallationPath)
-    assert(setup.CmdPath)
-    assert(setup.Product)
-    assert(setup.Version)
-    assert(setup.SDKFull)
-    assert(setup.SDK)
-  })
+    it('Find VS', function () {
+      assert(this.regSetup.RegistryVersion)
+      assert(this.regSetup.InstallationPath)
+      assert(this.regSetup.CmdPath)
+      assert(this.regSetup.Product)
+      assert(this.regSetup.SDKFull)
+      assert(this.regSetup.SDK)
+    })
 
-  it('Registry SDK', function () {
-    const setup = getter._forTesting.tryRegistrySDK()
-    if (!setup) {
-      console.log('registry method failed')
-      return
-    }
-    assert(setup['InstallationFolder'])
-    assert(setup['ProductVersion'])
-  })
+    it('Find VC 14.10', function () {
+      if (typeof this.regSetup.Version !== 'string') return this.skip()
+      assert(this.regSetup.Version.includes('14.10'), 'should have a 14.10 VC version')
+    })
 
-  it('Registry MSBuild', function () {
-    const msbSetup = getter._forTesting.tryRegistryMSBuild()
-    if (!msbSetup) {
-      console.log('registry method failed')
-      return this.skip()
-    }
-    assert(msbSetup.ver)
-    assert(msbSetup.MSBuildToolsPath)
-    assert(fs.existsSync(msbSetup.MSBuildToolsPath))
-    assert(msbSetup.MSBuildPath)
-    const parts = msbSetup.MSBuildPath.split('\\')
-    assert(parts.length >= 4)
-    assert(parts.pop() === 'MSBuild.exe')
-    assert(fs.existsSync(msbSetup.MSBuildPath))
+    it('Find SDK', function () {
+      const setup = getter._forTesting.tryRegistrySDK()
+      if (!setup) {
+        console.log('registry method failed')
+        return
+      }
+      assert(setup['InstallationFolder'])
+      assert(setup['ProductVersion'])
+    })
+
+    it('Find MSBuild', function () {
+      const msbSetup = getter._forTesting.tryRegistryMSBuild()
+      if (!msbSetup) {
+        console.log('registry method failed')
+        return this.skip()
+      }
+      assert(msbSetup.ver)
+      assert(msbSetup.MSBuildToolsPath)
+      assert(fs.existsSync(msbSetup.MSBuildToolsPath))
+      assert(msbSetup.MSBuildPath)
+      const parts = msbSetup.MSBuildPath.split('\\')
+      assert(parts.length >= 4)
+      assert(parts.pop() === 'MSBuild.exe')
+      assert(fs.existsSync(msbSetup.MSBuildPath))
+    })
   })
 
   after(() => {
@@ -344,7 +352,7 @@ describe('genEnvironment', function () {
       try {
         env = getter.resolveDevEnvironment(arch, noCache)
       } catch (e) {
-        if (!e.message.includes('not installed for')) throw e
+        if (!e.message.includes('could not be setup for')) throw e
         console.log(e.message)
         return
       }

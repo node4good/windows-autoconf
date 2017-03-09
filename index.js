@@ -6,6 +6,7 @@
  * @property {Boolean} IsComplete
  * @property {Boolean} IsLaunchable
  * @property {String} CmdPath
+ * @property {Object} FullCmd
  * @property {Object} MSBuild
  * @property {Object} VCTools
  * @property {Boolean} SDK8
@@ -107,27 +108,40 @@ function tryVS2017CSC () {
 }
 
 function tryVS2017Registry () {
+  let vsSetupsRaw
   try {
-    const vsSetupsRaw = execAndParse(module.exports.try_registry_path)
+    vsSetupsRaw = execAndParse(module.exports.try_registry_path)
     if (vsSetupsRaw[0] === 'ERROR') {
-      lazy.bindings.log('Couldn\'t find VS2017 in registry:(')
+      lazy.debug('Couldn\'t execute 2017 registry finder')
       return
     }
-    vsSetupsRaw.sort((a, b) => a.localeCompare(b)).reverse()
-    const vsSetup = vsSetupsRaw.find(i => Number(i.RegistryVersion) === 15.0)
-    if (!vsSetup) return
-    lazy.debugDir(vsSetup)
-    if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) return
-
-    const reg = lazy.bindings.execSync(`"${vsSetup.CmdPath}" -no_logo & set`).toString().trim().split(/\r?\n/g)
-    vsSetup.SDKFull = reg.find(l => l.includes('WindowsSDKVersion')).split('=').pop().replace('\\', '')
-    vsSetup.Version = reg.find(l => l.includes('VCToolsInstallDir')).replace(/.*?\\([\d.]{5,})\\.*/, '$1')
-    vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
-    vsSetup.Product = vsSetup.InstallationPath.split('\\').slice(-2, -1)[0]
-    return vsSetup
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find VS2017 via the registry')
+    lazy.debug('Couldn\'t execute 2017 registry finder: ' + e.message)
   }
+
+  const vsSetup = vsSetupsRaw.find(i => Number(i.RegistryVersion) === 15.0)
+  if (!vsSetup) {
+    lazy.debug('Couldn\'t find ver 15.0 in registry')
+    return
+  }
+  lazy.debugDir(vsSetup)
+  if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) {
+    lazy.debug(`${vsSetup.CmdPath} doesn't exist`)
+    return
+  }
+
+  let env
+  try {
+    env = resolveDevEnvironmentInner(`"${vsSetup.CmdPath}" -no_logo`)
+    lazy.debugDir(env)
+  } catch (e) {
+    lazy.debug('Couldn\'t execute 2017 VsDevCmd.bat: ' + e.message)
+  }
+  vsSetup.SDKFull = env['WindowsSDKVersion'].split('=').pop().replace('\\', '')
+  vsSetup.Version = Boolean(env['VCToolsInstallDir']) && env['VCToolsInstallDir'].replace(/.*?\\([\d.]{5,})\\.*/, '$1')
+  vsSetup.SDK = vsSetup.SDKFull.replace(/\d+$/, '0')
+  vsSetup.Product = vsSetup.InstallationPath.split('\\').slice(-2, -1)[0]
+  return vsSetup
 }
 
 function tryRegistrySDK () {
@@ -267,17 +281,16 @@ function findVcVarsFile (targetArch) {
   return setup.FullCmd
 }
 
-function resolveDevEnvironmentInner (setup) {
-  const vcEnvCmd = setup.FullCmd
-  const lines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
+function resolveDevEnvironmentInner (fullCmd) {
+  const lines = lazy.bindings.execSync(`${fullCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
   const hasFail = lines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
   if (hasFail) {
-    // noinspection ExceptionCaughtLocallyJS
-    throw new Error('Visual studio tools for C++ where not installed for ' + setup.arg_target_arch)
+    const lastArg = fullCmd.split('-').pop()
+    throw new Error(`Visual studio tools for C++ could not be setup for ${lastArg}\nby ${fullCmd}`)
   }
   const env = lines.reduce((s, l) => {
     const kv = l.split('=')
-    s[kv[0]] = kv[1]
+    if (kv.length === 2) s[kv[0]] = kv[1]
     return s
   }, {})
 
@@ -311,7 +324,7 @@ function resolveDevEnvironment (targetArch, noCache) {
     lazy.debugDir(ret)
     return ret
   } else {
-    const env = resolveDevEnvironmentInner(setup)
+    const env = resolveDevEnvironmentInner(setup.FullCmd, targetArch)
     cachable && lazy.bindings.fs.writeFileSync(cacheName, JSON.stringify(env))
     lazy.debug('actual resolution')
     lazy.debugDir(env)
