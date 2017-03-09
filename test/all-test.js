@@ -47,10 +47,17 @@ describe('Try cmd tools', () => {
       assert(fs.existsSync(setup.CmdPath))
     })
 
-    it('Powershell -Version 2', () => {
+    it('Powershell -Version 2', function () {
       const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\GetVS2017Configuration.cs').replace('"', '')
       const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
-      const ret = getter._forTesting.execAndParse(cmd)
+      let ret
+      try {
+        ret = getter._forTesting.execAndParse(cmd)
+      } catch (e) {
+        if (e.output[2].toString('utf16le').includes('not installed')) {
+          this.skip()
+        }
+      }
       const setup = ret[0]
       if (setup === 'No COM') return
       assert(setup.Product)
@@ -114,9 +121,9 @@ describe('Try cmd tools in a weird path', () => {
   describe('Try COM', () => {
     before(checkCom)
 
-    it('Powershell', () => {
+    it('Powershell', function () {
       const setup = getter._forTesting.tryVS2017Powershell()
-      if (setup === 'No COM') return
+      if (setup === 'No C++') return this.skip()
 
       assert(setup.Product)
       assert(setup.InstallationPath)
@@ -126,8 +133,10 @@ describe('Try cmd tools in a weird path', () => {
       assert(fs.existsSync(setup.CmdPath))
     })
 
-    it('Compile and run', () => {
+    it('Compile and run', function () {
       const setup = getter._forTesting.tryVS2017CSC()
+      if (setup === 'No C++') return this.skip()
+
       assert(setup.Product)
       assert(setup.InstallationPath)
       assert(setup.Version)
@@ -139,10 +148,8 @@ describe('Try cmd tools in a weird path', () => {
 
   it('Registry', function () {
     const setup = getter._forTesting.tryVS2017Registry()
-    if (!setup) {
-      console.log('registry method failed')
-      return this.skip()
-    }
+    if (!setup) return this.skip()
+
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
     assert(setup.CmdPath)
@@ -344,7 +351,7 @@ describe('genEnvironment', function () {
     }
     assert(env, 'didn\'t get ENVIRONMENT :(')
     const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
-    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :(')
+    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
     if (env['VisualStudioVersion'] === '15.0') {
       assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
       assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
@@ -366,7 +373,7 @@ describe('genEnvironment', function () {
       return
     }
     const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
-    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :(')
+    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
     if (env['VisualStudioVersion'] === '15.0') {
       assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86')
       assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')

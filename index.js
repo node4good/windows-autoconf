@@ -81,9 +81,10 @@ function execAndParse (cmd) {
 }
 
 function checkSetup (setups) {
-  if (setups && setups[0] === 'No COM') return
+  if (setups && setups[0] === 'No COM') return 'No COM'
   setups.sort((a, b) => a.Version.localeCompare(b.Version)).reverse()
   const setup = setups.find(s => s.MSBuild && s.VCTools && (s.SDK || s.SDK8))
+  if (setups.length && !setup) return 'No C++'
   return setup
 }
 
@@ -181,7 +182,7 @@ function locateMsbuild (ver) {
 
 function locateMSBuild2017 () {
   const vsSetup = getVS2017Setup()
-  if (!vsSetup) return
+  if (!vsSetup || typeof vsSetup === 'string') return
   const ver = '15.0'
   const MSBuildToolsPath = lazy.bindings.path.join(vsSetup.InstallationPath, 'MSBuild', ver, 'Bin')
   const MSBuildPath = lazy.bindings.path.join(MSBuildToolsPath, 'MSBuild.exe')
