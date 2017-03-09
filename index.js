@@ -39,9 +39,9 @@ const lazy = {
       this._patched = true
       this._bindings._execSync = this._bindings.execSync
       this._bindings.execSync = (cmd, options) => {
-        this._bindings.log(`==== CMD ====\n${cmd}\n=============`)
+        lazy.debug(`==== CMD ====\n${cmd}\n=============`)
         const ret = this._bindings._execSync(cmd, options)
-        this._bindings.log(`${ret}\n=============`)
+        lazy.debug(`${ret}\n=============`)
         return ret
       }
     }
@@ -224,23 +224,24 @@ function getOSBits () {
   if (hostArch === 'AMD64') { return 64 } else { return 32 }
 }
 
-function getWithFullCmd (targetArch) {
+function getWithFullCmd (argTargetArch) {
   let setup = getMSVSSetup()
-  setup.target_arch = targetArch
-  setup.hostBits = getOSBits()
-
   if (setup.version === 'auto') throw new Error('No Visual Studio found. Try to run from an MSVS console')
-  // NOTE: Largely inspired by `GYP`::MSVSVersion.py
+
+  if (argTargetArch === 'x86') argTargetArch = 'ia32'
+  setup.arg_target_arch = argTargetArch
+  setup.hostBits = getOSBits()
+  setup.hostArch = setup.hostBits === 64 ? 'amd64' : 'x86'
+  setup.targetArch = argTargetArch === 'x64' ? 'amd64' : argTargetArch === 'ia32' ? 'x86' : argTargetArch
+
   if (setup.version === '2017') {
-    const argArch = targetArch === 'x64' ? 'amd64' : targetArch === 'ia32' ? 'x86' : new Error(`Arch: '${targetArch}' is not supported`)
-    if (argArch instanceof Error) throw argArch
-    const argHost = setup.hostBits === 64 ? 'amd64' : 'x86'
-    setup.FullCmd = `${setup.CmdPath} -arch=${argArch} -host_arch=${argHost} -no_logo`
+    setup.FullCmd = `"${setup.CmdPath}" -arch=${setup.targetArch} -host_arch=${setup.hostArch} -no_logo`
   } else {
+    // NOTE: Largely inspired by `GYP`::MSVSVersion.py
     let cmdPathParts
     let arg
     setup.effectiveBits = setup.InstallationPath.includes('(x86)') ? 32 : setup.hostBits
-    if (targetArch === 'ia32') {
+    if (argTargetArch === 'ia32') {
       if (setup.effectiveBits === 64) {
         cmdPathParts = ['VC', 'vcvarsall.bat']
         arg = 'amd64_x86'
@@ -248,11 +249,11 @@ function getWithFullCmd (targetArch) {
         cmdPathParts = ['Common7', 'Tools', 'vsvars32.bat']
         arg = ''
       }
-    } else if (targetArch === 'x64') {
+    } else if (argTargetArch === 'x64') {
       cmdPathParts = ['VC', 'vcvarsall.bat']
       arg = setup.effectiveBits === 64 ? 'amd64' : 'x86_amd64'
     } else {
-      throw new Error(`Arch: '${targetArch}' is not supported`)
+      throw new Error(`Arch: '${argTargetArch}' is not supported`)
     }
     setup.CmdPath = lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)
     setup.FullCmd = `"${setup.CmdPath}" ${arg}`
@@ -272,7 +273,7 @@ function resolveDevEnvironmentInner (setup) {
   const hasFail = lines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
   if (hasFail) {
     // noinspection ExceptionCaughtLocallyJS
-    throw new Error('Visual studio tools for C++ where not installed for ' + setup.target_arch)
+    throw new Error('Visual studio tools for C++ where not installed for ' + setup.arg_target_arch)
   }
   const env = lines.reduce((s, l) => {
     const kv = l.split('=')

@@ -31,8 +31,6 @@ function checkCom () {
 
 describe('Try cmd tools', () => {
   describe('Try COM', function () {
-    this.timeout(30000)
-
     before(checkCom)
 
     it('Powershell', () => {
@@ -340,83 +338,31 @@ describe('Try node wrapper', function () {
 })
 
 describe('genEnvironment', function () {
-  it('resolve for x64 - no cache', () => {
-    let env
-    try {
-      env = getter.resolveDevEnvironment('x64', true)
-    } catch (e) {
-      if (!e.message.includes('not installed for')) throw e
-      console.log(e.message)
-      return
+  function testEnvGen (arch, noCache) {
+    return function () {
+      let env
+      try {
+        env = getter.resolveDevEnvironment(arch, noCache)
+      } catch (e) {
+        if (!e.message.includes('not installed for')) throw e
+        console.log(e.message)
+        return
+      }
+      assert(env, 'didn\'t get ENVIRONMENT :(')
+      const VCINSTALLDIR = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
+      assert(VCINSTALLDIR, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
+      if (env['VisualStudioVersion'] === '15.0') {
+        assert.equal(env['VSCMD_ARG_TGT_ARCH'], arch)
+        assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
+      }
     }
-    assert(env, 'didn\'t get ENVIRONMENT :(')
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
-    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
-    if (env['VisualStudioVersion'] === '15.0') {
-      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
-      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
-    }
-  })
+  }
 
-  it('resolve for x64', () => {
-    let env
-    try {
-      env = getter.resolveDevEnvironment('x64')
-    } catch (e) {
-      if (!e.message.includes('not installed for')) throw e
-      console.log(e.message)
-      return
-    }
-    assert(env, 'didn\'t get ENVIRONMENT :(')
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
-    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
-    if (env['VisualStudioVersion'] === '15.0') {
-      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
-      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
-    }
-  })
+  it('resolve for x64 - no cache', testEnvGen('x64', true))
 
-  it('resolve for x86 - no cache', () => {
-    let env
-    try {
-      env = getter.resolveDevEnvironment('ia32', true)
-    } catch (e) {
-      if (!e.message.includes('not installed for')) throw e
-      console.log(e.message)
-      return
-    }
-    assert(env, 'didn\'t get ENVIRONMENT :(')
-    if (env instanceof String) {
-      console.log(env)
-      return
-    }
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
-    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
-    if (env['VisualStudioVersion'] === '15.0') {
-      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86')
-      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
-    }
-  })
+  it('resolve for x64', testEnvGen('x64'))
 
-  it('resolve for x86', () => {
-    let env
-    try {
-      env = getter.resolveDevEnvironment('ia32')
-    } catch (e) {
-      if (!e.message.includes('not installed for')) throw e
-      console.log(e.message)
-      return
-    }
-    assert(env, 'didn\'t get ENVIRONMENT :(')
-    if (env instanceof String) {
-      console.log(env)
-      return
-    }
-    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
-    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
-    if (env['VisualStudioVersion'] === '15.0') {
-      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86')
-      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
-    }
-  })
+  it('resolve for x86 - no cache', testEnvGen('x86', true))
+
+  it('resolve for x86', testEnvGen('x86'))
 })
