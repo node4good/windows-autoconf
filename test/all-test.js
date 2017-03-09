@@ -340,6 +340,24 @@ describe('Try node wrapper', function () {
 })
 
 describe('genEnvironment', function () {
+  it('resolve for x64 - no cache', () => {
+    let env
+    try {
+      env = getter.resolveDevEnvironment('x64', true)
+    } catch (e) {
+      if (!e.message.includes('not installed for')) throw e
+      console.log(e.message)
+      return
+    }
+    assert(env, 'didn\'t get ENVIRONMENT :(')
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
+    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
+    if (env['VisualStudioVersion'] === '15.0') {
+      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
+      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
+    }
+  })
+
   it('resolve for x64', () => {
     let env
     try {
@@ -354,6 +372,28 @@ describe('genEnvironment', function () {
     assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
     if (env['VisualStudioVersion'] === '15.0') {
       assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x64')
+      assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
+    }
+  })
+
+  it('resolve for x86 - no cache', () => {
+    let env
+    try {
+      env = getter.resolveDevEnvironment('ia32', true)
+    } catch (e) {
+      if (!e.message.includes('not installed for')) throw e
+      console.log(e.message)
+      return
+    }
+    assert(env, 'didn\'t get ENVIRONMENT :(')
+    if (env instanceof String) {
+      console.log(env)
+      return
+    }
+    const COMNTOOLS = Object.keys(env).find(k => k.includes('VCINSTALLDIR'))
+    assert(COMNTOOLS, 'didn\'t get VCINSTALLDIR :( env:\n' + JSON.stringify(env, null, '  '))
+    if (env['VisualStudioVersion'] === '15.0') {
+      assert.equal(env['VSCMD_ARG_TGT_ARCH'], 'x86')
       assert(env['__VSCMD_PREINIT_PATH'], 'Last env var should be __VSCMD_PREINIT_PATH')
     }
   })

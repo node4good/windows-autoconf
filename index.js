@@ -268,15 +268,12 @@ function findVcVarsFile (targetArch) {
 
 function resolveDevEnvironmentInner (setup) {
   const vcEnvCmd = setup.FullCmd
-  const pre = lazy.bindings.execSync('set').toString().trim().split(/\r\n/g)
-  const preSet = new Set(pre)
-  const rawLines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
-  const hasFail = rawLines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
+  const lines = lazy.bindings.execSync(`${vcEnvCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
+  const hasFail = lines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
   if (hasFail) {
     // noinspection ExceptionCaughtLocallyJS
     throw new Error('Visual studio tools for C++ where not installed for ' + setup.target_arch)
   }
-  const lines = rawLines.filter(l => !preSet.has(l))
   const env = lines.reduce((s, l) => {
     const kv = l.split('=')
     s[kv[0]] = kv[1]
@@ -298,7 +295,7 @@ function setupCache (cacheDir) {
   }
 }
 
-function resolveDevEnvironment (targetArch) {
+function resolveDevEnvironment (targetArch, noCache) {
   const setup = getWithFullCmd(targetArch)
   lazy.debugDir(setup)
   const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
@@ -306,7 +303,7 @@ function resolveDevEnvironment (targetArch) {
   const cacheDir = lazy.bindings.path.join(env.HOME || env.USERPROFILE, '.autoconf')
   const cachable = setupCache(cacheDir)
   const cacheName = lazy.bindings.path.join(cacheDir, `_${cacheKey}${setup.Version}.json`)
-  if (cachable && lazy.bindings.fs.existsSync(cacheName)) {
+  if (!noCache && cachable && lazy.bindings.fs.existsSync(cacheName)) {
     const file = lazy.bindings.fs.readFileSync(cacheName)
     const ret = JSON.parse(file)
     lazy.debug('cache hit')
