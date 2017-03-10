@@ -5,13 +5,15 @@ image:
 
 environment:
   nodejs_version: "7"
-  DEBUG: "autoconf,node-gyp"
   NPM_TOKEN:
     secure: p6I7IcfVWhufrMLBwgQ2OQgMA/65tmLwryPmVr+zbRGpSUB/Kq/JPP/MSWmPNutQ
   matrix:
+    - GYP_MSVS_VERSION: "2010"
+    - GYP_MSVS_VERSION: "2012"
     - GYP_MSVS_VERSION: "2013"
     - GYP_MSVS_VERSION: "2015"
-    - GYP_MSVS_VERSION: "2017"
+    - GYP_MSVS_VERSION: "auto"
+    - GYP_MSVS_VERSION: ""
 
 matrix:
   allow_failures:
@@ -23,59 +25,94 @@ matrix:
       image: Visual Studio 2017 RC
     - GYP_MSVS_VERSION: "2013"
       image: Visual Studio 2017 RC
+    - GYP_MSVS_VERSION: ""
+      image: Visual Studio 2017 RC
 
 init:
-  - ps: IF ((test-path 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community') -and ($env:GYP_MSVS_VERSION -lt 2015)) {throw}
-  - ps: IF (!(test-path 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community') -and ($env:GYP_MSVS_VERSION -eq 2017)) {throw}
+  - ps: >-
+      if (test-path 'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community')
+      {
+        if (($env:GYP_MSVS_VERSION -lt 2015) -and ($env:GYP_MSVS_VERSION -ne $null)) {throw}
+      }
+      else
+      {
+        if ($env:GYP_MSVS_VERSION -eq 2017) {throw}
+      }
 
-# Install scripts. (runs after repo cloning)
 install:
-  # Get the latest stable version of Node.js or io.js
   - ps: Install-Product node $env:nodejs_version
-  # install modules
   - cmd: >-
       npm config set "//registry.npmjs.org/:_authToken=%NPM_TOKEN%" -q
 
       SET NPM_TOKEN=
 
-      npm -g install mocha
+      npm -g install mocha > nul
 
       npm link
 
       cd C:\projects & git clone https://github.com/node4good/gyp.js.git
 
-      cd C:\projects\gyp.js & npm link windows-autoconf & npm i
+      cd C:\projects\gyp.js & npm link windows-autoconf & npm i > nul 2> nul
 
       cd C:\projects & git clone https://github.com/refack/node-gyp.git
 
-      cd C:\projects\node-gyp & npm link windows-autoconf & npm i
+      cd C:\projects\node-gyp & npm link windows-autoconf & npm i > nul
 
-# Post-install test scripts.
+      cd C:\projects & git clone https://github.com/refack/build.git boost.build
+
 test_script:
-- cmd: >-
+- ps: >-
+    cd C:\projects\boost.build;
+
+    $s = Get-Content .\bootstrap.bat | select -Skip 1;
+
+    $s | Set-Content .\bootstrap.bat;
+
+    $s = Get-Content .\src\engine\build.bat | select -Skip 1;
+
+    $s | Set-Content .\src\engine\build.bat;
+
+    .\bootstrap.bat;
+
+    Push-AppveyorArtifact bootstrap.log;
+
+    if (!(Test-Path bjam.exe)) {throw}
+
+    cd test\test2;
+
+    ..\..\bjam;
+
+- ps: >-
     cd C:\projects\windows-autoconf
 
-    npm test
+    npm test 2> windows-autoconf.stderr.log
+
+    Push-AppveyorArtifact windows-autoconf.stderr.log
 
 - ps: >-
     if ($env:GYP_MSVS_VERSION -ge 2015)
     {
       cd C:\projects\node-gyp
+
       npm test 2> node-gyp.stderr.log
+
       Push-AppveyorArtifact node-gyp.stderr.log
     }
 
-- cmd: >-
+- ps: >-
     cd C:\projects\gyp.js
 
-    mocha
+    mocha 2> gyp.js.stderr.log
+
+    Push-AppveyorArtifact gyp.js.stderr.log
 
 deploy_script:
-- cmd: >-
+- ps: >-
     cd C:\projects\windows-autoconf
 
-    IF %APPVEYOR_REPO_TAG%==true IF %GYP_MSVS_VERSION%==2017 npm publish
+    if (($env:APPVEYOR_REPO_TAG -eq 'true') -and ($env:GYP_MSVS_VERSION -eq 2017))
+    {
+      npm publish
+    }
 
-
-# Don't actually build.
 build: off

@@ -210,7 +210,8 @@ function extractFile (str) {
 describe('Try node wrapper', function () {
   it('getMSVSVersion', () => {
     const version = getter.getMSVSVersion()
-    if ('GYP_MSVS_VERSION' in process.env) {
+    console.log(`env#${process.env['GYP_MSVS_VERSION']}#`)
+    if ('GYP_MSVS_VERSION' in process.env && !(['auto', ''].includes(process.env['GYP_MSVS_VERSION']))) {
       assert.equal(version, process.env['GYP_MSVS_VERSION'])
     } else {
       assert(['2010', '2012', '2013', '2015', '2015', '2017'].includes(version))
