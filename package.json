@@ -1,6 +1,6 @@
 {
   "name": "windows-autoconf",
-  "version": "1.9.7",
+  "version": "1.10.0",
   "description": "Try to find MS build tools",
   "main": "index.js",
   "os": [
