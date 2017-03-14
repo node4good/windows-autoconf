@@ -12,6 +12,8 @@
  * @property {String} CmdPath
  * @property {Object} FullCmd
  * @property {Object} MSBuild
+ * @property {Object} MSBuildToolsPath
+ * @property {Object} MSBuildPath
  * @property {Object} VCTools
  * @property {Boolean} SDK8
  * @property {Object} SDK
@@ -202,9 +204,7 @@ function locateMSBuild2017 () {
   const vsSetup = getVS2017Setup()
   if (!vsSetup || typeof vsSetup === 'string') return
   const ver = '15.0'
-  const MSBuildToolsPath = lazy.bindings.path.join(vsSetup.InstallationPath, 'MSBuild', ver, 'Bin')
-  const MSBuildPath = lazy.bindings.path.join(MSBuildToolsPath, 'MSBuild.exe')
-  return {ver, MSBuildToolsPath, MSBuildPath}
+  return {ver, MSBuildToolsPath: vsSetup.MSBuildToolsPath, MSBuildPath: vsSetup.MSBuildPath}
 }
 
 function getMSVSSetup (version) {

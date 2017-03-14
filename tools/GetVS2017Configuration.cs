@@ -225,7 +225,7 @@ namespace VisualStudioConfiguration
             Echo("\"InstallationPath\": \"{0}\",", instPath);
             Echo("\"IsComplete\": \"{0}\",", isComplete ? "true" : "false");
             Echo("\"IsLaunchable\": \"{0}\",", isLaunchable ? "true" : "false");
-            String cmd = (instPath + "\\\\Common7\\\\Tools\\\\VsDevCmd.bat");
+            String cmd = (instPath + @"\\Common7\\Tools\\VsDevCmd.bat");
             Echo("\"CmdPath\": \"{0}\",", cmd);
 
             List<string> packs = new List<String>();
@@ -256,6 +256,11 @@ namespace VisualStudioConfiguration
             string[] sdk10Parts = sdk10Ver.Split('.');
             sdk10Parts[sdk10Parts.Length - 1] = "0";
             Echo("\"MSBuild\": {0},", MSBuild);
+            if (MSBuild != "false") {
+                string MSBuildToolsPath = instPath + @"\\MSBuild\\15.0\\Bin\\";
+                Echo("\"MSBuildToolsPath\": \"{0}\",", MSBuildToolsPath);
+                Echo("\"MSBuildPath\": \"{0}\",", MSBuildToolsPath + "MSBuild.exe");
+            }
             Echo("\"VCTools\": {0},", VCTools);
             Echo("\"SDK8\": \"{0}\",", Win8SDK);
             Echo("\"SDK10\": \"{0}\",", sdk10Ver);

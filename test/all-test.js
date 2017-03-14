@@ -44,8 +44,14 @@ describe('Try cmd tools', () => {
       assert(setup.InstallationPath)
       assert(setup.Version)
       assert(setup.SDK)
+      assert(fs.existsSync(setup.InstallationPath))
       assert(setup.CmdPath)
       assert(fs.existsSync(setup.CmdPath))
+      if (setup.MSBuild) {
+        assert(setup.MSBuildToolsPath)
+        assert(setup.MSBuildPath)
+        assert(fs.existsSync(setup.MSBuildPath))
+      }
     })
 
     it('Powershell -Version 2', function () {
@@ -65,8 +71,14 @@ describe('Try cmd tools', () => {
       assert(setup.InstallationPath)
       assert(setup.Version)
       assert(setup.SDK)
+      assert(fs.existsSync(setup.InstallationPath))
       assert(setup.CmdPath)
       assert(fs.existsSync(setup.CmdPath))
+      if (setup.MSBuild) {
+        assert(setup.MSBuildToolsPath)
+        assert(setup.MSBuildPath)
+        assert(fs.existsSync(setup.MSBuildPath))
+      }
     })
 
     it('Compile and run', () => {
@@ -76,8 +88,14 @@ describe('Try cmd tools', () => {
       assert(setup.InstallationPath)
       assert(setup.Version)
       assert(setup.SDK)
+      assert(fs.existsSync(setup.InstallationPath))
       assert(setup.CmdPath)
       assert(fs.existsSync(setup.CmdPath))
+      if (setup.MSBuild) {
+        assert(setup.MSBuildToolsPath)
+        assert(setup.MSBuildPath)
+        assert(fs.existsSync(setup.MSBuildPath))
+      }
     })
   })
 
@@ -90,7 +108,14 @@ describe('Try cmd tools', () => {
     }
     assert(setup.RegistryVersion)
     assert(setup.InstallationPath)
+    assert(fs.existsSync(setup.InstallationPath))
     assert(setup.CmdPath)
+    assert(fs.existsSync(setup.CmdPath))
+    if (setup.MSBuild) {
+      assert(setup.MSBuildToolsPath)
+      assert(setup.MSBuildPath)
+      assert(fs.existsSync(setup.MSBuildPath))
+    }
   })
 
   it('SDK Registry', () => {
@@ -100,8 +125,8 @@ describe('Try cmd tools', () => {
       console.log('registry method failed')
       return
     }
-    assert(setup['InstallationFolder'])
     assert(setup['ProductVersion'])
+    assert(setup['InstallationFolder'])
   })
 })
 
@@ -257,7 +282,13 @@ describe('Try node wrapper', function () {
       assert(vsSetup.CmdPath)
       assert(vsSetup.CmdPath.match(/\.bat$/i))
       assert(fs.existsSync(vsSetup.InstallationPath))
+      assert(vsSetup.CmdPath)
       assert(fs.existsSync(vsSetup.CmdPath))
+      if (vsSetup.MSBuild) {
+        assert(vsSetup.MSBuildToolsPath)
+        assert(vsSetup.MSBuildPath)
+        assert(fs.existsSync(vsSetup.MSBuildPath))
+      }
     })
 
     it('locateMSBuild2017', () => {
