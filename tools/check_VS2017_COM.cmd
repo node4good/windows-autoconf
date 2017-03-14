@@ -1,3 +1,7 @@
+:: Copyright 2017 - Refael Ackermann
+:: Distributed under MIT style license
+:: See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
+
 @ECHO OFF
 SETLOCAL
 SET PROMPT=$G

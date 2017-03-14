@@ -1,4 +1,9 @@
-﻿// powershell -ExecutionPolicy Unrestricted -Version "2.0" -Command "&{ Add-Type -Path Program.cs; [VisualStudioConfiguration.Program]::Main(@())}"
+﻿// Copyright 2017 - Refael Ackermann
+// Distributed under MIT style license
+// See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
+
+// Usage:
+// powershell -ExecutionPolicy Unrestricted -Version "2.0" -Command "&{ Add-Type -Path GetVS2017Configuration.cs; [VisualStudioConfiguration.Main]::Query()}"
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;

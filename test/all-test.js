@@ -1,5 +1,8 @@
-/* eslint-disable no-path-concat */
+// Copyright 2017 - Refael Ackermann
+// Distributed under MIT style license
+// See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
 'use strict'
+/* eslint-disable no-path-concat */
 /* global describe, it, before, after */
 /** @namespace this
  *  @property {function} skip

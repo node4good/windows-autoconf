@@ -1,3 +1,7 @@
+:: Copyright 2017 - Refael Ackermann
+:: Distributed under MIT style license
+:: See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
+
 :: proper output starts with '    ' so we can filter debug output, but stay JSON transparent
 @IF NOT DEFINED DEBUG_GETTER @ECHO OFF
 SETLOCAL
