@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 
 namespace VisualStudioConfiguration
 {
@@ -182,94 +183,131 @@ namespace VisualStudioConfiguration
     {
     }
 
+    public class VSInstance : Dictionary<string, object>
+    {
+        public string ToJSON() {
+             List<string> outStrings = new List<string>();
+             foreach (string key in this.Keys) {
+                 string line = '"' + key + "\": ";
+                 switch (this[key].GetType().Name) {
+                     case "String":
+                        string str = (String)this[key];
+                        if (str.IndexOf('{') == 0) line += str;
+                        else line += '"' + (String)this[key] + '"';
+                     break;
+
+                     case "String[]":
+                        line += "[\n    " + String.Join(",\n    ", (string[])this[key]) + "    \n    ]";
+                     break;
+
+                     case "Boolean":
+                        line += (Boolean)this[key] ? "true" : "false";
+                     break;
+
+                     default:
+                        line = null;
+                     break;
+                 }
+                 if (line != null) outStrings.Add(line);
+             }
+             return "{\n        " + String.Join(",\n        ", outStrings.ToArray()) + "\n    }";
+        }
+        public static string ToJSON(IEnumerable<VSInstance> insts){
+             List<string> outStrings = new List<string>();
+             foreach (VSInstance inst in insts) {
+                outStrings.Add(inst.ToJSON());
+             }
+             return "    [\n    " + String.Join(",\n    ", outStrings.ToArray()) + "    \n    ]";
+        }
+    }
+
     public static class Main
     {
-
-        public static void Echo(string tmplt, params Object[] args)
-        {
-            string str = (args.Length > 0) ? String.Format(tmplt, args) : tmplt;
-            Console.Write("    " + str + '\n');
-        }
-
         public static void Query()
         {
+            List<VSInstance> insts = QueryEx(null);
+            Console.Write(VSInstance.ToJSON(insts));
+        }
+
+
+        public static List<VSInstance> QueryEx(string[] args)
+        {
+            List<VSInstance> insts = new List<VSInstance>();
 			ISetupConfiguration query = new SetupConfiguration();
 			ISetupConfiguration2 query2 = (ISetupConfiguration2) query;
 			IEnumSetupInstances e = query2.EnumAllInstances();
 			ISetupInstance2[] rgelt = new ISetupInstance2[1];
 			int pceltFetched;
-            Echo("[");
             e.Next(1, rgelt, out pceltFetched);
 			while (pceltFetched > 0)
 			{
-                PrintInstance(rgelt[0]);
+                ISetupInstance2 raw = rgelt[0];
+                insts.Add(ParseInstance(raw));
                 e.Next(1, rgelt, out pceltFetched);
-				if (pceltFetched > 0)
-				    Echo(",");
 			}
-            Echo("]");
+            return insts;
         }
 
-        private static void PrintInstance(ISetupInstance2 setupInstance2)
+        private static VSInstance ParseInstance(ISetupInstance2 setupInstance2)
         {
-            Echo("{");
+            VSInstance inst = new VSInstance();
             string[] prodParts = setupInstance2.GetProduct().GetId().Split('.');
             Array.Reverse(prodParts);
-            string prod = prodParts[0];
-            string instPath = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
-            string installationVersion = setupInstance2.GetInstallationVersion();
-            bool isComplete = setupInstance2.IsComplete();
-            bool isLaunchable = setupInstance2.IsLaunchable();
-            Echo("\"Product\": \"{0}\",", prod);
-            Echo("\"Version\": \"{0}\",", installationVersion);
-            Echo("\"InstallationPath\": \"{0}\",", instPath);
-            Echo("\"IsComplete\": \"{0}\",", isComplete ? "true" : "false");
-            Echo("\"IsLaunchable\": \"{0}\",", isLaunchable ? "true" : "false");
-            String cmd = (instPath + @"\\Common7\\Tools\\VsDevCmd.bat");
-            Echo("\"CmdPath\": \"{0}\",", cmd);
+            inst["Product"] = prodParts[0];
+            inst["Version"] = setupInstance2.GetInstallationVersion();
+            inst["InstallationPath"] = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
+            inst["IsComplete"] = setupInstance2.IsComplete();
+            inst["IsLaunchable"] = setupInstance2.IsLaunchable();
+            inst["CmdPath"] = (inst["InstallationPath"] + @"\\Common7\\Tools\\VsDevCmd.bat");
 
+            inst["Win8SDK"] = "";
+            inst["SDK10"] = "";
+            inst["VisualCppTools"] = "";
             List<string> packs = new List<String>();
-            string MSBuild = "false";
-            string VCTools = "false";
-            string Win8SDK = "0";
-            string sdk10Ver = "0";
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
                 string id = package.GetId();
+
                 string ver = package.GetVersion();
                 string detail = "{\"id\": \"" + id + "\", \"version\":\"" + ver + "\"}";
-                packs.Add("    " + detail);
+                packs.Add("        " + detail);
 
                 if (id.Contains("Component.MSBuild")) {
-                    MSBuild = detail;
-                } else if (id.Contains("VC.Tools")) {
-                    VCTools = detail;
+                    inst["MSBuild"] = detail;
+                    inst["MSBuildVer"] = ver;
+                } else if (id.Contains("Microsoft.VisualCpp.Tools.Core")) {
+                    inst["VisualCppTools"] = ver;
+                    inst["VCTools"] = detail;
                 } else if (id.Contains("Microsoft.Windows.81SDK")) {
-                    if (Win8SDK.CompareTo(ver) > 0) continue;
-                    Win8SDK = ver;
+                    if (inst["Win8SDK"].ToString().CompareTo(ver) > 0) continue;
+                    inst["Win8SDK"] = ver;
                 } else if (id.Contains("Win10SDK_10")) {
-                    if (sdk10Ver.CompareTo(ver) > 0) continue;
-                    sdk10Ver = ver;
+                    if (inst["SDK10"].ToString().CompareTo(ver) > 0) continue;
+                    inst["SDK10"] = ver;
                 }
             }
             packs.Sort();
-            string[] sdk10Parts = sdk10Ver.Split('.');
+            inst["Packages"] = packs.ToArray();
+
+            string[] sdk10Parts = inst["SDK10"].ToString().Split('.');
             sdk10Parts[sdk10Parts.Length - 1] = "0";
-            Echo("\"MSBuild\": {0},", MSBuild);
-            if (MSBuild != "false") {
-                string MSBuildToolsPath = instPath + @"\\MSBuild\\15.0\\Bin\\";
-                Echo("\"MSBuildToolsPath\": \"{0}\",", MSBuildToolsPath);
-                Echo("\"MSBuildPath\": \"{0}\",", MSBuildToolsPath + "MSBuild.exe");
+            inst["SDK10"] = String.Join(".", sdk10Parts);
+            inst["SDK"] = inst["SDK10"].ToString() != "0" ? inst["SDK10"] : inst["SDK8"];
+            Regex trimmer = new Regex(@"\.\d+$");
+            if (inst.ContainsKey("MSBuild")) {
+                string ver = trimmer.Replace(trimmer.Replace((string)inst["MSBuildVer"], ""), "");
+                inst["MSBuildToolsPath"] = inst["InstallationPath"] + @"\\MSBuild\\" + ver + @"\\Bin\\";
+                inst["MSBuildPath"] = inst["MSBuildToolsPath"] + "MSBuild.exe";
             }
-            Echo("\"VCTools\": {0},", VCTools);
-            Echo("\"SDK8\": \"{0}\",", Win8SDK);
-            Echo("\"SDK10\": \"{0}\",", sdk10Ver);
-            Echo("\"SDK\": \"{0}\",", String.Join(".", sdk10Parts));
-            Echo("\"Packages\": [\n    {0}    \n    ]", String.Join(",\n    ", packs.ToArray()));
-            Echo("}");
+            if (inst.ContainsKey("VisualCppTools")) {
+                string ver = trimmer.Replace((string)inst["VisualCppTools"], "");
+                inst["VisualCppToolsX64"] = inst["InstallationPath"] + @"\\VC\\Tools\\MSVC\\" + ver + @"\\bin\\HostX64\\x64\\";
+                inst["VisualCppToolsX86"] = inst["InstallationPath"] + @"\\VC\\Tools\\MSVC\\" + ver + @"\\bin\\HostX86\\x86\\";
+            }
+
+            return inst;
         }
     }
-
 }
 
 public static class Program
