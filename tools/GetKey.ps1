@@ -14,6 +14,7 @@ $arg = $args[0]
 if ($key -eq "All") { echo $inst; Exit 0 }
 if ($key -ne "") { echo $inst.Get($key); Exit 0 }
 # Default is get `cl.exe` path
-if ($env:PROCESSOR_ARCHITEW6432 -ne $null) {$toolsKey = 'VisualCppToolsX64'} else {$toolsKey = 'VisualCppToolsX86'}
+if (($env:PROCESSOR_ARCHITEW6432 -ne $null) -or ($env:PROCESSOR_ARCHITECTURE -eq 'AMD64'))
+{ $toolsKey = 'VisualCppToolsX64' } else {$toolsKey = 'VisualCppToolsX86'}
 $cl = $inst.Get($toolsKey) + 'cl.exe'
 if (($cl -ne $null) -and (Test-Path $cl)) {echo $cl} else {Exit 0}
