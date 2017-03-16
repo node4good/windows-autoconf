@@ -245,8 +245,12 @@ namespace VisualStudioConfiguration
     {
         public static void Query()
         {
-            List<VSInstance> insts = QueryEx();
-            Console.Write(VSInstance.ToJSON(insts));
+            try {
+                List<VSInstance> insts = QueryEx();
+                Console.Write(VSInstance.ToJSON(insts));
+            } catch (Exception e) {
+                Console.Error.Write(e.ToString());
+            }
         }
 
 
@@ -326,7 +330,7 @@ namespace VisualStudioConfiguration
             string[] sdk10Parts = inst["SDK10"].ToString().Split('.');
             sdk10Parts[sdk10Parts.Length - 1] = "0";
             inst["SDK10"] = String.Join(".", sdk10Parts);
-            inst["SDK"] = inst["SDK10"].ToString() != "0" ? inst["SDK10"] : inst["SDK8"];
+            inst["SDK"] = inst["SDK10"].ToString() != "0" ? inst["SDK10"] : inst["Win8SDK"];
             Regex trimmer = new Regex(@"\.\d+$");
             if (inst.ContainsKey("MSBuild")) {
                 string ver = trimmer.Replace(trimmer.Replace((string)inst["MSBuildVer"], ""), "");
