@@ -185,15 +185,20 @@ namespace VisualStudioConfiguration
 
     public class VSInstance : Dictionary<string, object>
     {
+        public object Get(string key) {
+            if (!this.ContainsKey(key)) return false;
+            return this[key];
+        }
+
         public string ToJSON() {
              List<string> outStrings = new List<string>();
              foreach (string key in this.Keys) {
                  string line = '"' + key + "\": ";
                  switch (this[key].GetType().Name) {
                      case "String":
-                        string str = (String)this[key];
-                        if (str.IndexOf('{') == 0) line += str;
-                        else line += '"' + (String)this[key] + '"';
+                        string str = ((String)this[key]).Replace("\\", "\\\\");
+                        if (str.Trim().IndexOf('{') == 0) line += str;
+                        else line += '"' + str + '"';
                      break;
 
                      case "String[]":
@@ -219,18 +224,33 @@ namespace VisualStudioConfiguration
              }
              return "    [\n    " + String.Join(",\n    ", outStrings.ToArray()) + "    \n    ]";
         }
+        public bool JSONBool(string key)
+        {
+            if (key == null || key == "") return true;
+            if (!this.ContainsKey(key)) return false;
+            object val = this[key];
+            if (val is Boolean) return (bool)val;
+            if (val is String[]) return ((String[])val).Length != 0;
+            string sVal = (string)val;
+            if (sVal == null) return false;
+            if (sVal.Length == 0) return false;
+            if (sVal.Trim() == "{}") return false;
+            if (sVal.Trim() == "[]") return false;
+            if (sVal.Trim() == "0") return false;
+            return true;
+        }
     }
 
     public static class Main
     {
         public static void Query()
         {
-            List<VSInstance> insts = QueryEx(null);
+            List<VSInstance> insts = QueryEx();
             Console.Write(VSInstance.ToJSON(insts));
         }
 
 
-        public static List<VSInstance> QueryEx(string[] args)
+        public static List<VSInstance> QueryEx(params string[] args)
         {
             List<VSInstance> insts = new List<VSInstance>();
 			ISetupConfiguration query = new SetupConfiguration();
@@ -245,6 +265,16 @@ namespace VisualStudioConfiguration
                 insts.Add(ParseInstance(raw));
                 e.Next(1, rgelt, out pceltFetched);
 			}
+            foreach (string key in args) {
+                foreach (VSInstance inst in insts.ToArray())
+                {
+                    if (!inst.JSONBool(key)) {
+                        string line = String.Format("filter: {0} - {1}, does not meet criteria since `inst[{2}] = '{3}'`\n", inst["Product"], inst["Name"], key, inst[key]);
+                        Console.Error.Write(line);
+                        insts.Remove(inst);
+                    }
+                }
+            }
             return insts;
         }
 
@@ -254,11 +284,15 @@ namespace VisualStudioConfiguration
             string[] prodParts = setupInstance2.GetProduct().GetId().Split('.');
             Array.Reverse(prodParts);
             inst["Product"] = prodParts[0];
+            inst["ID"] = setupInstance2.GetInstanceId();
+            inst["Name"] = setupInstance2.GetDisplayName(0x1000);
+            inst["Description"] = setupInstance2.GetDescription(0x1000);
+            inst["InstallationName"] = setupInstance2.GetInstallationName();
             inst["Version"] = setupInstance2.GetInstallationVersion();
-            inst["InstallationPath"] = setupInstance2.GetInstallationPath().Replace("\\", "\\\\");
+            inst["InstallationPath"] = setupInstance2.GetInstallationPath();
             inst["IsComplete"] = setupInstance2.IsComplete();
             inst["IsLaunchable"] = setupInstance2.IsLaunchable();
-            inst["CmdPath"] = (inst["InstallationPath"] + @"\\Common7\\Tools\\VsDevCmd.bat");
+            inst["CmdPath"] = (inst["InstallationPath"] + @"\Common7\Tools\VsDevCmd.bat");
 
             inst["Win8SDK"] = "";
             inst["SDK10"] = "";
@@ -296,15 +330,15 @@ namespace VisualStudioConfiguration
             Regex trimmer = new Regex(@"\.\d+$");
             if (inst.ContainsKey("MSBuild")) {
                 string ver = trimmer.Replace(trimmer.Replace((string)inst["MSBuildVer"], ""), "");
-                inst["MSBuildToolsPath"] = inst["InstallationPath"] + @"\\MSBuild\\" + ver + @"\\Bin\\";
+                inst["MSBuildToolsPath"] = inst["InstallationPath"] + @"\MSBuild\" + ver + @"\Bin\";
                 inst["MSBuildPath"] = inst["MSBuildToolsPath"] + "MSBuild.exe";
             }
             if (inst.ContainsKey("VisualCppTools")) {
                 string ver = trimmer.Replace((string)inst["VisualCppTools"], "");
-                inst["VisualCppToolsX64"] = inst["InstallationPath"] + @"\\VC\\Tools\\MSVC\\" + ver + @"\\bin\\HostX64\\x64\\";
-                inst["VisualCppToolsX86"] = inst["InstallationPath"] + @"\\VC\\Tools\\MSVC\\" + ver + @"\\bin\\HostX86\\x86\\";
+                inst["VisualCppToolsX64"] = inst["InstallationPath"] + @"\VC\Tools\MSVC\" + ver + @"\bin\HostX64\x64\";
+                inst["VisualCppToolsX86"] = inst["InstallationPath"] + @"\VC\Tools\MSVC\" + ver + @"\bin\HostX86\x86\";
             }
-
+            inst["IsVcCompatible"] = inst.JSONBool("SDK") && inst.JSONBool("MSBuild") && inst.JSONBool("VisualCppTools");
             return inst;
         }
     }
