@@ -1,14 +1,15 @@
 # Test against the latest version of this Node.js version
 environment:
   nodejs_version: "7"
+  DEBUG: "autoconf"
   NPM_TOKEN:
     secure: p6I7IcfVWhufrMLBwgQ2OQgMA/65tmLwryPmVr+zbRGpSUB/Kq/JPP/MSWmPNutQ
   matrix:
-    - GYP_MSVS_VERSION: "2015"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - GYP_MSVS_VERSION: "auto"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - GYP_MSVS_VERSION: ""
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - GYP_MSVS_VERSION: "2013"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - GYP_MSVS_VERSION: "2015"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
@@ -54,6 +55,8 @@ install:
 
       md C:\projects\windows-autoconf\logs
 
+      set > C:\projects\windows-autoconf\logs\set.log
+
       npm -g install mocha > nul
 
       npm link
@@ -62,11 +65,11 @@ install:
 
       cd C:\projects & git clone https://github.com/node4good/gyp.js.git
 
-      cd C:\projects\gyp.js & npm link windows-autoconf & npm i > nul 2> nul
+      cd C:\projects\gyp.js & npm link windows-autoconf
 
       cd C:\projects & git clone https://github.com/refack/node-gyp.git
 
-      cd C:\projects\node-gyp & npm link windows-autoconf & npm i > nul
+      cd C:\projects\node-gyp & npm link windows-autoconf
 
       cd C:\projects & git clone https://github.com/refack/build.git boost.build
 
@@ -105,10 +108,18 @@ test_script:
     ..\..\bjam 2> C:\projects\windows-autoconf\logs\bjam_err.log;
 
 - cmd: >-
-    IF NOT SKIP_NODE_GYP=1 cd C:\projects\node-gyp & npm test 2> C:\projects\windows-autoconf\logs\node-gyp_err.log
+    cd C:\projects\node-gyp
+
+    npm i > C:\projects\windows-autoconf\logs\node-gyp_npm.log
+
+    IF NOT SKIP_NODE_GYP=1 npm test 2> C:\projects\windows-autoconf\logs\node-gyp_err.log
 
 - cmd: >-
     cd C:\projects\gyp.js
+
+    npm i --ignore-scripts
+
+    node_modules\.bin\babel src -d lib
 
     mocha 2> C:\projects\windows-autoconf\logs\gyp_js_err.log
 
@@ -119,7 +130,7 @@ deploy_script:
 
 
 on_finish:
-- ps: >-
-    cd C:\projects\windows-autoconf\logs\;
+  - ps: >-
+      cd C:\projects\windows-autoconf\logs\;
 
-    Get-Item *.* | %{ Push-AppveyorArtifact $_.FullName}
+      Get-Item *.* | %{ Push-AppveyorArtifact $_.FullName}
