@@ -1,6 +1,7 @@
 # Copyright 2017 - Refael Ackermann
 # Distributed under MIT style license
 # See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
+# version: 1.10.0
 
 param (
     [Parameter(Mandatory=$false)]

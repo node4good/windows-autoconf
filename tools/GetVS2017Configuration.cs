@@ -1,6 +1,7 @@
 ﻿// Copyright 2017 - Refael Ackermann
 // Distributed under MIT style license
 // See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
+// version: 1.10.0
 
 // Usage:
 // powershell -ExecutionPolicy Unrestricted -Version "2.0" -Command "&{ Add-Type -Path GetVS2017Configuration.cs; [VisualStudioConfiguration.Main]::Query()}"
