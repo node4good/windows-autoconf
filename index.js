@@ -32,14 +32,14 @@ const bindings = {
       log: console.log.bind(console),
       error: console.error.bind(console),
       execSync: require('child_process').execSync,
-      process: process,
-      isDebug: this._checkForDebug(this.process.env['DEBUG'])
+      process: process
     }
     return _bindings
   },
   set inner (_bindings) {
+    _bindings.isDebug = this._checkForDebug(_bindings.process.env['DEBUG'])
     this._bindings = _bindings
-    this.__proto__ = _bindings
+    Object.setPrototypeOf(this, _bindings)
     if (this.isDebug && !this._patched) {
       this._patched = true
       _bindings.util = require('util')

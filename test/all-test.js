@@ -17,19 +17,11 @@ const execSync = getter._forTesting.bindings.execSync
 
 const prods = new Set(['BuildTools', 'Enterprise', 'Professional', 'Community'])
 function checkCom () {
-  let ret
   try {
-    ret = execSync(getter.check_VS2017_COM_path).toString()
+    execSync(getter.check_VS2017_COM_path).toString()
   } catch (e) {
     assert.equal(e.status, 1)
-    ret = e.output[1].toString().trim()
-    assert.equal(ret, '"No COM"')
-  }
-  const setup = JSON.parse(ret)
-  if (setup === 'No COM') {
     this.skip()
-  } else {
-    assert.equal(setup, 'COM Ok')
   }
 }
 
@@ -56,8 +48,8 @@ describe('Try cmd tools', () => {
     })
 
     it('Powershell -Version 2', function () {
-      const csfile = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\GetVS2017Configuration.cs').replace('"', '')
-      const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type -Path '${csfile}'; [VisualStudioConfiguration.Main]::Query()}"`
+      const csfiles = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\*.cs').replace('"', '')
+      const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type (Out-String -InputObject (Get-Content '${csfiles}')); [VisualStudioConfiguration.Program]::Query() }`
       let ret
       try {
         ret = getter._forTesting.execAndParse(cmd)

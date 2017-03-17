@@ -1,17 +1,17 @@
 ﻿// Copyright 2017 - Refael Ackermann
 // Distributed under MIT style license
 // See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
-// version: 1.10.0
+// version: 1.11.0
 
 // Usage:
-// powershell -ExecutionPolicy Unrestricted -Version "2.0" -Command "&{ Add-Type -Path GetVS2017Configuration.cs; [VisualStudioConfiguration.Main]::Query()}"
-using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
-
+// powershell -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path GetVS2017Configuration.cs; $insts = [VisualStudioConfiguration.ComSurrogate]::QueryEx(); $insts | ft }"
 namespace VisualStudioConfiguration
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using System.Text.RegularExpressions;
+
     [Flags]
     public enum InstanceState : uint
     {
@@ -192,47 +192,6 @@ namespace VisualStudioConfiguration
             return this[key];
         }
 
-
-        public string ToJSON() {
-             List<string> outStrings = new List<string>();
-             List<string> keys = new List<string>(this.Keys);
-             keys.Sort();
-             foreach (string key in keys) {
-                 string line = '"' + key + "\": ";
-                 switch (this[key].GetType().Name) {
-                     case "String":
-                        string str = ((String)this[key]).Replace("\\", "\\\\");
-                        if (str.Trim().IndexOf('{') == 0) line += str;
-                        else line += '"' + str + '"';
-                     break;
-
-                     case "String[]":
-                        line += "[\n    " + String.Join(",\n    ", (string[])this[key]) + "    \n    ]";
-                     break;
-
-                     case "Boolean":
-                        line += (Boolean)this[key] ? "true" : "false";
-                     break;
-
-                     default:
-                        line = null;
-                     break;
-                 }
-                 if (line != null) outStrings.Add(line);
-             }
-             return "{\n        " + String.Join(",\n        ", outStrings.ToArray()) + "\n    }";
-        }
-
-
-        public static string ToJSON(IEnumerable<VSInstance> insts){
-             List<string> outStrings = new List<string>();
-             foreach (VSInstance inst in insts) {
-                outStrings.Add(inst.ToJSON());
-             }
-             return "    [\n    " + String.Join(",\n    ", outStrings.ToArray()) + "    \n    ]";
-        }
-
-
         public bool JSONBool(string key)
         {
             if (key == null || key == "") return true;
@@ -250,24 +209,12 @@ namespace VisualStudioConfiguration
         }
     }
 
-    public static class Main
+    public static class ComSurrogate
     {
         public static bool Is64()
         {
             return (IntPtr.Size == 8);
         }
-
-
-        public static void Query()
-        {
-            try {
-                List<VSInstance> insts = QueryEx();
-                Console.Write(VSInstance.ToJSON(insts));
-            } catch (Exception e) {
-                Console.Error.Write(e.ToString());
-            }
-        }
-
 
         public static List<VSInstance> QueryEx(params string[] args)
         {
@@ -372,15 +319,5 @@ namespace VisualStudioConfiguration
             inst["IsVcCompatible"] = inst.JSONBool("SDK") && inst.JSONBool("MSBuild") && inst.JSONBool("VisualCppTools");
             return inst;
         }
-    }
-}
-
-
-public static class Program
-{
-    public static int Main(string[] args)
-    {
-        VisualStudioConfiguration.Main.Query();
-        return 0;
     }
 }
