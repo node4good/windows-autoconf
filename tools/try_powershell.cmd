@@ -9,7 +9,7 @@ SETLOCAL
 SET PROMPT=$G
 PUSHD %~dp0
 CALL check_VS2017_COM.cmd > nul
-IF ERRORLEVEL 1 (ECHO     ["No COM"] & EXIT /B)
+IF ERRORLEVEL 1 (ECHO     ["No COM"] & EXIT /B 0)
 SET "JIT_AND_RUN=Add-Type (Out-String -InputObject (Get-Content '*.cs')); [VisualStudioConfiguration.Program]::Query()"
 powershell -NoProfile -ExecutionPolicy Unrestricted -Command "& { %JIT_AND_RUN% }"
 POPD
