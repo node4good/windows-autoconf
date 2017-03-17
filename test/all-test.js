@@ -1,6 +1,7 @@
 // Copyright 2017 - Refael Ackermann
 // Distributed under MIT style license
 // See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
+
 'use strict'
 /* eslint-disable no-path-concat */
 /* global describe, it, before, after */
@@ -11,8 +12,8 @@
 const fs = require('fs')
 const Path = require('path')
 const assert = require('assert')
-const execSync = require('child_process').execSync
 const getter = require('../')
+const execSync = getter._forTesting.bindings.execSync
 
 const prods = new Set(['BuildTools', 'Enterprise', 'Professional', 'Community'])
 function checkCom () {
@@ -131,12 +132,14 @@ describe('Try cmd tools', () => {
 })
 
 describe('Try cmd tools in a weird path', () => {
+  console.log(__dirname)
   const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\`
   const {try_powershell_path, compile_run_path, try_registry_path} = getter
   before(() => {
     try {
       execSync(`"cmd.exe" /s /c mkdir ${weirdDir}`)
     } catch (_) {}
+
     const ret = execSync(`"cmd.exe" /s /c "xcopy /y /r /e /q "${__dirname + '\\..\\tools\\*.*'}" ${weirdDir}" "`).toString()
     assert(ret.includes('File(s) copied'))
     getter.try_powershell_path = Path.join(weirdDir, Path.basename(getter.try_powershell_path))

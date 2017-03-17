@@ -20,55 +20,62 @@
  * @property {Array} Packages
  * @property {?String} RegistryVersion
  */
-/**
- * @namespace lazy.bindings.fs.mkdirpSync
- */
 
-const lazy = {
+const bindings = {
   _patched: false,
   _bindings: null,
-  get isDebug () { return (this._bindings.process.env['DEBUG'] || '').split(',').includes('autoconf') },
-  get bindings () {
-    if (!this._bindings) {
-      this._bindings = {
-        fs: require('fs'),
-        path: require('path'),
-        log: console.log.bind(console),
-        error: console.error.bind(console),
-        execSync: require('child_process').execSync,
-        process: process
-      }
-      if (!('mkdirpSync' in this._bindings.fs)) {
-        this._bindings.fs.mkdirpSync = this._bindings.fs.mkdirSync
-      }
+  _checkForDebug (env) { return (env || '').split(',').includes('autoconf') },
+  _createDefaultBindings () {
+    const _bindings = {
+      fs: require('fs'),
+      path: require('path'),
+      log: console.log.bind(console),
+      error: console.error.bind(console),
+      execSync: require('child_process').execSync,
+      process: process,
+      isDebug: this._checkForDebug(this.process.env['DEBUG'])
     }
+    return _bindings
+  },
+  set inner (_bindings) {
+    this._bindings = _bindings
+    this.__proto__ = _bindings
     if (this.isDebug && !this._patched) {
       this._patched = true
-      this._bindings._execSync = this._bindings.execSync
-      this._bindings.execSync = (cmd, options) => {
-        lazy.debug(`==== CMD ====\n${cmd}\n=============`)
-        const ret = this._bindings._execSync(cmd, options)
-        lazy.debug(`${ret}\n=============`)
+      _bindings.util = require('util')
+      _bindings._execSync = _bindings.execSync
+      _bindings.execSync = (cmd, ...args) => {
+        console.log('============== execSync ==============')
+        console.log('execSync cmd: %s', cmd)
+        console.log('execSync args: %j', args)
+        const ret = _bindings._execSync(cmd, ...args)
+        console.log('=== output: ===\n')
+        console.log(ret)
+        console.log('============== execSync ==============')
         return ret
       }
     }
+  },
+  get inner () {
+    if (!this._bindings) {
+      this.inner = this._createDefaultBindings()
+    }
     return this._bindings
   },
-  debug (...args) { if (this.isDebug) this.bindings.log(...args) },
+  debug (...args) { if (this.isDebug) this.log(...args) },
   debugDir (arg) {
     if (this.isDebug) {
-      const util = require('util')
-      console.log('=============\n%s\n=============', util.inspect(arg, {colors: true}))
+      console.log('=============\n%s\n=============', this.util.inspect(arg, {colors: true}))
     }
   }
 }
 
-function setBindings (bindings) {
-  lazy._bindings = bindings
+function setBindings (_bindings) {
+  bindings.inner = _bindings
 }
 
 function execAndParse (cmd) {
-  const lines = lazy.bindings.execSync(cmd).toString().split(/\r?\n/g)
+  const lines = bindings.inner.execSync(cmd).toString().split(/\r?\n/g)
   const ret = lines.filter(l => l.slice(0, 4) === '    ').join('')
   const log = lines.filter(l => l.slice(0, 4) !== '    ').join('')
   const err = ['ERROR', log, ret]
@@ -78,11 +85,11 @@ function execAndParse (cmd) {
     setup.log = log
     return setup
   } catch (e) {
-    lazy.debug('====== ret =======')
-    lazy.debug(ret)
-    lazy.debug('====== log =======')
-    lazy.debug(log)
-    lazy.debug('==================')
+    bindings.debug('====== ret =======')
+    bindings.debug(ret)
+    bindings.debug('====== log =======')
+    bindings.debug(log)
+    bindings.debug('==================')
     return err.concat([e])
   }
 }
@@ -100,7 +107,7 @@ function tryVS2017Powershell () {
     const vsSetups = execAndParse(module.exports.try_powershell_path)
     return checkSetup(vsSetups)
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find VS2017 with powershell')
+    bindings.log('Couldn\'t find VS2017 with powershell')
   }
 }
 
@@ -109,7 +116,7 @@ function tryVS2017CSC () {
     const vsSetups = execAndParse(module.exports.compile_run_path)
     return checkSetup(vsSetups)
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find VS2017 with a compiled exe')
+    bindings.log('Couldn\'t find VS2017 with a compiled exe')
   }
 }
 
@@ -118,30 +125,30 @@ function tryVS2017Registry () {
   try {
     vsSetupsRaw = execAndParse(module.exports.try_registry_path)
     if (vsSetupsRaw[0] === 'ERROR') {
-      lazy.debug('Couldn\'t execute 2017 registry finder')
+      bindings.debug('Couldn\'t execute 2017 registry finder')
       return
     }
   } catch (e) {
-    lazy.debug('Couldn\'t execute 2017 registry finder: ' + e.message)
+    bindings.debug('Couldn\'t execute 2017 registry finder: ' + e.message)
   }
 
   const vsSetup = vsSetupsRaw.find(i => Number(i.RegistryVersion) === 15.0)
   if (!vsSetup) {
-    lazy.debug('Couldn\'t find ver 15.0 in registry')
+    bindings.debug('Couldn\'t find ver 15.0 in registry')
     return
   }
-  lazy.debugDir(vsSetup)
-  if (!lazy.bindings.fs.existsSync(vsSetup.CmdPath)) {
-    lazy.debug(`${vsSetup.CmdPath} doesn't exist`)
+  bindings.debugDir(vsSetup)
+  if (!bindings.inner.fs.existsSync(vsSetup.CmdPath)) {
+    bindings.debug(`${vsSetup.CmdPath} doesn't exist`)
     return
   }
 
   let env
   try {
     env = resolveDevEnvironmentInner(`"${vsSetup.CmdPath}" -no_logo`)
-    lazy.debugDir(env)
+    bindings.debugDir(env)
   } catch (e) {
-    lazy.debug('Couldn\'t execute 2017 VsDevCmd.bat: ' + e.message)
+    bindings.debug('Couldn\'t execute 2017 VsDevCmd.bat: ' + e.message)
   }
   vsSetup.SDKFull = env['WindowsSDKVersion'].split('=').pop().replace('\\', '')
   vsSetup.Version = Boolean(env['VCToolsInstallDir']) && env['VCToolsInstallDir'].replace(/.*?\\([\d.]{5,})\\.*/, '$1')
@@ -153,7 +160,7 @@ function tryVS2017Registry () {
 function tryRegistrySDK () {
   try {
     const sdkSetups = execAndParse(module.exports.try_registry_sdk_path)
-    lazy.debug(JSON.stringify(sdkSetups, null, '  '))
+    bindings.debug(JSON.stringify(sdkSetups, null, '  '))
     const vers = sdkSetups
       .filter(s => s['InstallationFolder'])
       .map(s => {
@@ -163,11 +170,11 @@ function tryRegistrySDK () {
       })
       .sort((a, b) => a[0] - b[0])
       .reverse()
-    lazy.debug(JSON.stringify(vers, null, '  '))
+    bindings.debug(JSON.stringify(vers, null, '  '))
     const sdkSetup = sdkSetups.find(s => s['ProductVersion'] === vers[0].ProductVersion)
     return sdkSetup
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find any SDK in registry')
+    bindings.log('Couldn\'t find any SDK in registry')
   }
 }
 
@@ -179,7 +186,7 @@ function tryRegistryMSBuild (ver) {
     const msbSetup = msbSetups.find(s => s['ver'] === ver)
     return msbSetup
   } catch (e) {
-    lazy.bindings.log('Couldn\'t find any SDK in registry')
+    bindings.log('Couldn\'t find any SDK in registry')
   }
 }
 
@@ -194,7 +201,7 @@ function locateMsbuild (ver) {
   ver = ver || 'auto'
   const msbSetup = ((ver in {2017: 1, auto: 1}) && locateMSBuild2017()) || tryRegistryMSBuild(ver)
   if (!msbSetup) {
-    lazy.bindings.log('Can\'t find "msbuild.exe"')
+    bindings.log('Can\'t find "msbuild.exe"')
     return
   }
   return msbSetup.MSBuildPath
@@ -209,7 +216,7 @@ function locateMSBuild2017 () {
 
 function getMSVSSetup (version) {
   if ('cacheSetup' in getMSVSSetup) return getMSVSSetup.cacheSetup
-  const env = lazy.bindings.process.env
+  const env = bindings.process.env
   if (!version) { version = env['GYP_MSVS_VERSION'] || 'auto' }
 
   let setup = getVS2017Setup()
@@ -227,14 +234,14 @@ function getMSVSSetup (version) {
     setup = {version, InstallationPath: ''}
   }
   if (setup.CommonTools) {
-    setup.InstallationPath = lazy.bindings.path.join(setup.CommonTools, '..', '..')
+    setup.InstallationPath = bindings.path.join(setup.CommonTools, '..', '..')
   }
   getMSVSSetup.cacheSetup = setup
   return setup
 }
 
 function getOSBits () {
-  const env = lazy.bindings.process.env
+  const env = bindings.process.env
 
   // PROCESSOR_ARCHITEW6432 - is a system arch
   // PROCESSOR_ARCHITECTURE - is a session arch
@@ -273,7 +280,7 @@ function getWithFullCmd (argTargetArch) {
     } else {
       throw new Error(`Arch: '${argTargetArch}' is not supported`)
     }
-    setup.CmdPath = lazy.bindings.path.join(setup.InstallationPath, ...cmdPathParts)
+    setup.CmdPath = bindings.path.join(setup.InstallationPath, ...cmdPathParts)
     setup.FullCmd = `"${setup.CmdPath}" ${arg}`
   }
   return setup
@@ -286,7 +293,7 @@ function findVcVarsFile (targetArch) {
 }
 
 function resolveDevEnvironmentInner (fullCmd) {
-  const lines = lazy.bindings.execSync(`${fullCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
+  const lines = bindings.execSync(`${fullCmd} & set`, {env: {}}).toString().trim().split(/\r\n/g)
   const hasFail = lines.slice(0, 2).some(l => l.includes('missing') || l.includes('not be installed'))
   if (hasFail) {
     const lastArg = fullCmd.split('-').pop()
@@ -303,10 +310,10 @@ function resolveDevEnvironmentInner (fullCmd) {
 
 function setupCache (cacheDir) {
   try {
-    const ex = lazy.bindings.fs.existsSync(cacheDir)
-    if (!ex) lazy.bindings.fs.mkdirpSync(cacheDir)
-    const testFile = lazy.bindings.path.join(cacheDir, '.check')
-    lazy.bindings.fs.writeFileSync(testFile, '')
+    const ex = bindings.fs.existsSync(cacheDir)
+    if (!ex) bindings.fs.mkdirSync(cacheDir)
+    const testFile = bindings.path.join(cacheDir, '.check')
+    bindings.fs.writeFileSync(testFile, '')
     return true
   } catch (_) {
     return false
@@ -315,23 +322,23 @@ function setupCache (cacheDir) {
 
 function resolveDevEnvironment (targetArch, noCache) {
   const setup = getWithFullCmd(targetArch)
-  lazy.debugDir(setup)
+  bindings.debugDir(setup)
   const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
-  const env = lazy.bindings.process.env
-  const cacheDir = lazy.bindings.path.join(env.HOME || env.USERPROFILE, '.autoconf')
+  const env = bindings.process.env
+  const cacheDir = bindings.path.join(env.HOME || env.USERPROFILE, '.autoconf')
   const cachable = setupCache(cacheDir)
-  const cacheName = lazy.bindings.path.join(cacheDir, `_${cacheKey}${setup.Version}.json`)
-  if (!noCache && cachable && lazy.bindings.fs.existsSync(cacheName)) {
-    const file = lazy.bindings.fs.readFileSync(cacheName)
+  const cacheName = bindings.path.join(cacheDir, `_${cacheKey}${setup.Version}.json`)
+  if (!noCache && cachable && bindings.fs.existsSync(cacheName)) {
+    const file = bindings.fs.readFileSync(cacheName)
     const ret = JSON.parse(file)
-    lazy.debug('cache hit')
-    lazy.debugDir(ret)
+    bindings.debug('cache hit')
+    bindings.debugDir(ret)
     return ret
   } else {
     const env = resolveDevEnvironmentInner(setup.FullCmd, targetArch)
-    cachable && lazy.bindings.fs.writeFileSync(cacheName, JSON.stringify(env))
-    lazy.debug('actual resolution')
-    lazy.debugDir(env)
+    cachable && bindings.fs.writeFileSync(cacheName, JSON.stringify(env))
+    bindings.debug('actual resolution')
+    bindings.debugDir(env)
     return env
   }
 }
@@ -353,6 +360,10 @@ module.exports = {
   findOldVcVarsFile: (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
   _forTesting: {
+    get bindings () {
+      if (!bindings._bindings) bindings.inner
+      return bindings
+    },
     tryVS2017Powershell,
     tryVS2017CSC,
     tryVS2017Registry,
