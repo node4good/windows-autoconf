@@ -16,6 +16,7 @@
  * @property {Object} MSBuildPath
  * @property {Object} VCTools
  * @property {Boolean} SDK8
+ * @property {Boolean} IsVcCompatible
  * @property {Object} SDK
  * @property {Array} Packages
  * @property {?String} RegistryVersion
@@ -45,13 +46,14 @@ const bindings = {
       _bindings.util = require('util')
       _bindings._execSync = _bindings.execSync
       _bindings.execSync = (cmd, ...args) => {
-        console.log('============== execSync ==============')
-        console.log('execSync cmd: %s', cmd)
-        console.log('execSync args: %j', args)
+        this.debug('============== execSync start ==============')
+        this.debug('execSync cmd: %s', cmd)
+        this.debug('execSync args: %j', args)
         const ret = _bindings._execSync(cmd, ...args)
-        console.log('=== output: ===\n')
-        console.log(ret)
-        console.log('============== execSync ==============')
+        this.debug('=== output: ===')
+        this.debug(ret.toString())
+        this.debug('===')
+        this.debug('============== execSync end ================')
         return ret
       }
     }
@@ -62,10 +64,12 @@ const bindings = {
     }
     return this._bindings
   },
-  debug (...args) { if (this.isDebug) this.log(...args) },
+  debug (...args) { if (this.isDebug) this.error(...args) },
   debugDir (arg) {
     if (this.isDebug) {
-      console.log('=============\n%s\n=============', this.util.inspect(arg, {colors: true}))
+      this.debug('===== dir =====')
+      this.debug(this.util.inspect(arg, {colors: true}))
+      this.debug('=== dir end ===')
     }
   }
 }
@@ -97,8 +101,11 @@ function execAndParse (cmd) {
 function checkSetup (setups) {
   if (setups && setups[0] === 'No COM') return 'No COM'
   setups.sort((a, b) => a.Version.localeCompare(b.Version)).reverse()
-  const setup = setups.find(s => s.MSBuild && s.VCTools && (s.SDK || s.SDK8))
+  const setup = setups.find(s => s.IsVcCompatible)
   if (setups.length && !setup) return 'No C++'
+  bindings.debug('=== checkSetup ===')
+  bindings.debugDir(setup)
+  bindings.debug('==================')
   return setup
 }
 
@@ -193,6 +200,9 @@ function tryRegistryMSBuild (ver) {
 function getVS2017Setup () {
   if ('cache2017' in getVS2017Setup) return getVS2017Setup.cache2017
   const vsSetup = tryVS2017Powershell() || tryVS2017CSC() || tryVS2017Registry()
+  bindings.debug('=== Selected vsSetup ===')
+  bindings.debugDir(vsSetup)
+  bindings.debug('========================')
   getVS2017Setup.cache2017 = vsSetup
   return vsSetup
 }
