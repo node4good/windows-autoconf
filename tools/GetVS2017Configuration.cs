@@ -183,6 +183,7 @@ namespace VisualStudioConfiguration
     {
     }
 
+
     public class VSInstance : Dictionary<string, object>
     {
         public object Get(string key) {
@@ -190,9 +191,12 @@ namespace VisualStudioConfiguration
             return this[key];
         }
 
+
         public string ToJSON() {
              List<string> outStrings = new List<string>();
-             foreach (string key in this.Keys) {
+             List<string> keys = new List<string>(this.Keys);
+             keys.Sort();
+             foreach (string key in keys) {
                  string line = '"' + key + "\": ";
                  switch (this[key].GetType().Name) {
                      case "String":
@@ -217,6 +221,8 @@ namespace VisualStudioConfiguration
              }
              return "{\n        " + String.Join(",\n        ", outStrings.ToArray()) + "\n    }";
         }
+
+
         public static string ToJSON(IEnumerable<VSInstance> insts){
              List<string> outStrings = new List<string>();
              foreach (VSInstance inst in insts) {
@@ -224,6 +230,8 @@ namespace VisualStudioConfiguration
              }
              return "    [\n    " + String.Join(",\n    ", outStrings.ToArray()) + "    \n    ]";
         }
+
+
         public bool JSONBool(string key)
         {
             if (key == null || key == "") return true;
@@ -243,6 +251,12 @@ namespace VisualStudioConfiguration
 
     public static class Main
     {
+        public static bool Is64()
+        {
+            return (IntPtr.Size == 8);
+        }
+
+
         public static void Query()
         {
             try {
@@ -269,14 +283,17 @@ namespace VisualStudioConfiguration
                 insts.Add(ParseInstance(raw));
                 e.Next(1, rgelt, out pceltFetched);
 			}
-            foreach (string key in args) {
-                foreach (VSInstance inst in insts.ToArray())
-                {
+            foreach (VSInstance inst in insts.ToArray())
+            {
+                foreach (string key in args) {
                     if (!inst.JSONBool(key)) {
                         string line = String.Format("filter: {0} - {1}, does not meet criteria since `inst[{2}] = '{3}'`\n", inst["Product"], inst["Name"], key, inst[key]);
                         Console.Error.Write(line);
                         insts.Remove(inst);
                     }
+                }
+                if (Array.IndexOf(args, "Packages") == -1) {
+                    inst.Remove("Packages");
                 }
             }
             return insts;
@@ -293,13 +310,17 @@ namespace VisualStudioConfiguration
             inst["Description"] = setupInstance2.GetDescription(0x1000);
             inst["InstallationName"] = setupInstance2.GetInstallationName();
             inst["Version"] = setupInstance2.GetInstallationVersion();
+            inst["State"] = Enum.GetName(typeof(InstanceState), setupInstance2.GetState());
             inst["InstallationPath"] = setupInstance2.GetInstallationPath();
             inst["IsComplete"] = setupInstance2.IsComplete();
             inst["IsLaunchable"] = setupInstance2.IsLaunchable();
-            inst["CmdPath"] = (inst["InstallationPath"] + @"\Common7\Tools\VsDevCmd.bat");
+            inst["Common7ToolsPath"] = inst["InstallationPath"] + @"\Common7\Tools\";
+            inst["CmdPath"] = inst["Common7ToolsPath"] + "VsDevCmd.bat";
+            inst["VCAuxiliaryBuildPath"] = inst["InstallationPath"] + @"\VC\Auxiliary\Build\";
+            inst["VCVarsAllPath"] = inst["VCAuxiliaryBuildPath"] + "vcvarsall.bat";
 
             inst["Win8SDK"] = "";
-            inst["SDK10"] = "";
+            inst["SDK10Full"] = "";
             inst["VisualCppTools"] = "";
             List<string> packs = new List<String>();
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
@@ -312,7 +333,7 @@ namespace VisualStudioConfiguration
 
                 if (id.Contains("Component.MSBuild")) {
                     inst["MSBuild"] = detail;
-                    inst["MSBuildVer"] = ver;
+                    inst["MSBuildVerFull"] = ver;
                 } else if (id.Contains("Microsoft.VisualCpp.Tools.Core")) {
                     inst["VisualCppTools"] = ver;
                     inst["VCTools"] = detail;
@@ -320,33 +341,39 @@ namespace VisualStudioConfiguration
                     if (inst["Win8SDK"].ToString().CompareTo(ver) > 0) continue;
                     inst["Win8SDK"] = ver;
                 } else if (id.Contains("Win10SDK_10")) {
-                    if (inst["SDK10"].ToString().CompareTo(ver) > 0) continue;
-                    inst["SDK10"] = ver;
+                    if (inst["SDK10Full"].ToString().CompareTo(ver) > 0) continue;
+                    inst["SDK10Full"] = ver;
                 }
             }
             packs.Sort();
             inst["Packages"] = packs.ToArray();
 
-            string[] sdk10Parts = inst["SDK10"].ToString().Split('.');
+            string[] sdk10Parts = inst["SDK10Full"].ToString().Split('.');
             sdk10Parts[sdk10Parts.Length - 1] = "0";
             inst["SDK10"] = String.Join(".", sdk10Parts);
             inst["SDK"] = inst["SDK10"].ToString() != "0" ? inst["SDK10"] : inst["Win8SDK"];
             Regex trimmer = new Regex(@"\.\d+$");
-            if (inst.ContainsKey("MSBuild")) {
-                string ver = trimmer.Replace(trimmer.Replace((string)inst["MSBuildVer"], ""), "");
+            if (inst.ContainsKey("MSBuildVerFull")) {
+                string ver = trimmer.Replace(trimmer.Replace((string)inst["MSBuildVerFull"], ""), "");
+                inst["MSBuildVer"] = ver;
                 inst["MSBuildToolsPath"] = inst["InstallationPath"] + @"\MSBuild\" + ver + @"\Bin\";
                 inst["MSBuildPath"] = inst["MSBuildToolsPath"] + "MSBuild.exe";
             }
             if (inst.ContainsKey("VisualCppTools")) {
                 string ver = trimmer.Replace((string)inst["VisualCppTools"], "");
                 inst["VisualCppToolsX64"] = inst["InstallationPath"] + @"\VC\Tools\MSVC\" + ver + @"\bin\HostX64\x64\";
+                inst["VisualCppToolsX64CL"] = inst["VisualCppToolsX64"] + "cl.exe";
                 inst["VisualCppToolsX86"] = inst["InstallationPath"] + @"\VC\Tools\MSVC\" + ver + @"\bin\HostX86\x86\";
+                inst["VisualCppToolsX86CL"] = inst["VisualCppToolsX86"] + "cl.exe";
+                inst["VisualCppTools"] = Is64() ? inst["VisualCppToolsX64"] : inst["VisualCppToolsX86"];
+                inst["VisualCppToolsCL"] = Is64() ? inst["VisualCppToolsX64CL"] : inst["VisualCppToolsX86CL"];
             }
             inst["IsVcCompatible"] = inst.JSONBool("SDK") && inst.JSONBool("MSBuild") && inst.JSONBool("VisualCppTools");
             return inst;
         }
     }
 }
+
 
 public static class Program
 {
