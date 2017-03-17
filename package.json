@@ -3,9 +3,6 @@
   "version": "1.9.8",
   "description": "Try to find MS build tools",
   "main": "index.js",
-  "os": [
-    "win32"
-  ],
   "dependencies": {},
   "devDependencies": {},
   "scripts": {
