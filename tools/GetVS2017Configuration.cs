@@ -1,7 +1,7 @@
 ﻿// Copyright 2017 - Refael Ackermann
 // Distributed under MIT style license
 // See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
-// version: 1.11.0
+// version: 1.11.1
 
 // Usage:
 // powershell -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path GetVS2017Configuration.cs; $insts = [VisualStudioConfiguration.ComSurrogate]::QueryEx(); $insts | ft }"
@@ -235,8 +235,6 @@ namespace VisualStudioConfiguration
             {
                 foreach (string key in args) {
                     if (!inst.JSONBool(key)) {
-                        string line = String.Format("filter: {0} - {1}, does not meet criteria since `inst[{2}] = '{3}'`\n", inst["Product"], inst["Name"], key, inst[key]);
-                        Console.Error.Write(line);
                         insts.Remove(inst);
                     }
                 }
