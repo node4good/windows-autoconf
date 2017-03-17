@@ -7,7 +7,9 @@ SETLOCAL
 PUSHD %~dp0
 SET PROMPT=$G
 SET DEBUG_GETTER=
-CALL :find_CL %~dp0 %1 %2
+SET COM_TEST="if (-NOT (Test-Path 'Registry::HKEY_CLASSES_ROOT\CLSID\{177F0C4A-1CD3-4DE7-A32C-71DBBB9FA36D}'))"
+powershell -ExecutionPolicy Unrestricted -Command "%COM_TEST% { Exit 1 }"
+IF NOT ERRORLEVEL 1 CALL :find_CL %~dp0 %1 %2
 POPD
 GOTO :eof
 
