@@ -9,8 +9,6 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - GYP_MSVS_VERSION: ""
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    - GYP_MSVS_VERSION: "2013"
-      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     - GYP_MSVS_VERSION: "2015"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     - GYP_MSVS_VERSION: "auto"
@@ -28,17 +26,15 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 
-matrix:
-  fast_finish: true
-
-
 init:
   - ps: >-
       & { Echo "GYP_MSVS_VERSION='$env:GYP_MSVS_VERSION'" };
 
       if (($env:GYP_MSVS_VERSION -ge 2012) -and ($env:GYP_MSVS_VERSION -lt 2015)) {
-        $env:SKIP_NODE_GYP="1"
-      };
+        $env:TEST_NODE_GYP="0"
+      } else {
+        $env:TEST_NODE_GYP="1"
+      }
 
       if (($env:APPVEYOR_REPO_TAG -eq 'true') -and ($env:GYP_MSVS_VERSION -eq 2017) -and ($env:APPVEYOR_IMAGE -eq 2017))
       {
@@ -98,21 +94,21 @@ test_script:
 
     if (!(Test-Path bjam.exe)) {throw}
 
-- cmd: >-
-    cd C:\projects\boost.build
-
-    copy "C:\projects\boost.build\bootstrap.log" "C:\projects\windows-autoconf\logs\"
-
-    cd test\test2
-
-    ..\..\bjam 2> C:\projects\windows-autoconf\logs\bjam_err.log;
-
+#- cmd: >-
+#    cd C:\projects\boost.build
+#
+#    copy "C:\projects\boost.build\bootstrap.log" "C:\projects\windows-autoconf\logs\"
+#
+#    cd test\test2
+#
+#    ..\..\bjam 2> C:\projects\windows-autoconf\logs\bjam_err.log;
+#
 - cmd: >-
     cd C:\projects\node-gyp
 
     npm i > C:\projects\windows-autoconf\logs\node-gyp_npm.log
 
-    IF NOT SKIP_NODE_GYP=1 npm test 2> C:\projects\windows-autoconf\logs\node-gyp_err.log
+    IF %TEST_NODE_GYP%==1 npm test 2> C:\projects\windows-autoconf\logs\node-gyp_err.log
 
 - cmd: >-
     cd C:\projects\gyp.js
@@ -125,8 +121,8 @@ test_script:
 
 
 deploy_script:
-- cmd: >-
-    IF SHOULD_PUBLISH==1 npm publish
+  - cmd: >-
+      IF DEFINED SHOULD_PUBLISH npm publish
 
 
 on_finish:
