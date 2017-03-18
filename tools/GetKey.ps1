@@ -9,8 +9,8 @@ param (
     [Parameter(Mandatory=$false)]
     [string]$key = "VisualCppToolsCL"
 )
+if (-NOT (Test-Path 'Registry::HKEY_CLASSES_ROOT\CLSID\{177F0C4A-1CD3-4DE7-A32C-71DBBB9FA36D}')) { Exit 1 }
 Add-Type -Path GetVS2017Configuration.cs;
-$inst = ([VisualStudioConfiguration.ComSurrogate]::QueryEx($filter))[0]
-$arg = $args[0]
-if ($key -eq "All") { echo $inst; Exit 0 }
-if ($key -ne "") { echo $inst.Get($key) }
+$insts = [VisualStudioConfiguration.ComSurrogate]::QueryEx()
+if ($filter -ne "*") { $insts = $insts | where { $_.Get($filter) } }
+if ($key -eq "*") { $insts | echo } else { $insts | % { $_.Get($key) } }
