@@ -1,7 +1,7 @@
 ﻿// Copyright 2017 - Refael Ackermann
 // Distributed under MIT style license
 // See accompanying file LICENSE at https://github.com/node4good/windows-autoconf
-// version: 1.11.1
+// version: 1.11.2
 
 // Usage:
 // powershell -ExecutionPolicy Unrestricted -Command "&{ Add-Type -Path GetVS2017Configuration.cs; $insts = [VisualStudioConfiguration.ComSurrogate]::QueryEx(); $insts | ft }"
@@ -268,6 +268,9 @@ namespace VisualStudioConfiguration
             inst["Win8SDK"] = "";
             inst["SDK10Full"] = "";
             inst["VisualCppTools"] = "";
+
+            Regex trimmer = new Regex(@"\.\d+$");
+
             List<string> packs = new List<String>();
             foreach (ISetupPackageReference package in setupInstance2.GetPackages())
             {
@@ -281,8 +284,11 @@ namespace VisualStudioConfiguration
                     inst["MSBuild"] = detail;
                     inst["MSBuildVerFull"] = ver;
                 } else if (id.Contains("Microsoft.VisualCpp.Tools.Core")) {
-                    inst["VisualCppTools"] = ver;
                     inst["VCTools"] = detail;
+                    inst["VisualCppToolsFullVersion"] = ver;
+                    string majorMinor = trimmer.Replace(trimmer.Replace(ver, ""), "");
+                    inst["VisualCppToolsVersionMinor"] = majorMinor;
+                    inst["VCToolsVersionCode"] = "vc" + majorMinor.Replace(".", "");
                 } else if (id.Contains("Microsoft.Windows.81SDK")) {
                     if (inst["Win8SDK"].ToString().CompareTo(ver) > 0) continue;
                     inst["Win8SDK"] = ver;
@@ -298,15 +304,14 @@ namespace VisualStudioConfiguration
             sdk10Parts[sdk10Parts.Length - 1] = "0";
             inst["SDK10"] = String.Join(".", sdk10Parts);
             inst["SDK"] = inst["SDK10"].ToString() != "0" ? inst["SDK10"] : inst["Win8SDK"];
-            Regex trimmer = new Regex(@"\.\d+$");
             if (inst.ContainsKey("MSBuildVerFull")) {
                 string ver = trimmer.Replace(trimmer.Replace((string)inst["MSBuildVerFull"], ""), "");
                 inst["MSBuildVer"] = ver;
                 inst["MSBuildToolsPath"] = inst["InstallationPath"] + @"\MSBuild\" + ver + @"\Bin\";
                 inst["MSBuildPath"] = inst["MSBuildToolsPath"] + "MSBuild.exe";
             }
-            if (inst.ContainsKey("VisualCppTools")) {
-                string ver = trimmer.Replace((string)inst["VisualCppTools"], "");
+            if (inst.ContainsKey("VCTools")) {
+                string ver = trimmer.Replace((string)inst["VisualCppToolsFullVersion"], "");
                 inst["VisualCppToolsX64"] = inst["InstallationPath"] + @"\VC\Tools\MSVC\" + ver + @"\bin\HostX64\x64\";
                 inst["VisualCppToolsX64CL"] = inst["VisualCppToolsX64"] + "cl.exe";
                 inst["VisualCppToolsX86"] = inst["InstallationPath"] + @"\VC\Tools\MSVC\" + ver + @"\bin\HostX86\x86\";
