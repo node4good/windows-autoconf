@@ -9,7 +9,7 @@ SETLOCAL
 SET PROMPT=$G
 CALL "%~dp0check_VS2017_COM.cmd" > nul
 IF ERRORLEVEL 1 (ECHO     ["No COM"]& EXIT /B)
-SET CS_NAME="%~dp0GetVS2017Configuration.cs"
+SET CS_NAME="%~dp0..\tools-core\GetVS2017Configuration.cs"
 SET CS_NAME2="%~dp0VS2017ConfigurationHelper.cs"
 SET EXE_NAME="%~dp0GetVS2017Configuration.exe"
 DEL /Q %EXE_NAME%

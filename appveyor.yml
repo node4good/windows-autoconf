@@ -49,6 +49,10 @@ install:
 
       SET NPM_TOKEN=
 
+      git submodule init
+
+      git submodule update
+
       md C:\projects\windows-autoconf\logs
 
       set > C:\projects\windows-autoconf\logs\set.log

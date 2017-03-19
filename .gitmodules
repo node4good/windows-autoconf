@@ -1,0 +1,3 @@
+[submodule "tools-core"]
+	path = tools-core
+	url = https://github.com/node4good/msvs-com-helper.git

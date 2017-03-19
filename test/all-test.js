@@ -48,7 +48,7 @@ describe('Try cmd tools', () => {
     })
 
     it('Powershell -Version 2', function () {
-      const csfiles = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\*.cs').replace('"', '')
+      const csfiles = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\..\\tools*\\*.cs').replace('"', '')
       const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type (Out-String -InputObject (Get-Content '${csfiles}')); [VisualStudioConfiguration.Program]::Query() }`
       let ret
       try {
@@ -125,15 +125,21 @@ describe('Try cmd tools', () => {
 
 describe('Try cmd tools in a weird path', () => {
   console.log(__dirname)
-  const weirdDir = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\`
+  const weirdDirBase = `"${__dirname}\\.tmp\\ t o l s !\\ oh$# boy lady gaga\\`
+  const weirdDir = `${weirdDirBase}tools`
+  const weirdDir2 = `${weirdDirBase}tools-core`
   const {try_powershell_path, compile_run_path, try_registry_path} = getter
+
   before(() => {
     try {
       execSync(`"cmd.exe" /s /c mkdir ${weirdDir}`)
+      execSync(`"cmd.exe" /s /c mkdir ${weirdDir2}`)
     } catch (_) {}
 
     const ret = execSync(`"cmd.exe" /s /c "xcopy /y /r /e /q "${__dirname + '\\..\\tools\\*.*'}" ${weirdDir}" "`).toString()
     assert(ret.includes('File(s) copied'))
+    const ret2 = execSync(`"cmd.exe" /s /c "xcopy /y /r /e /q "${__dirname + '\\..\\tools-core\\*.*'}" ${weirdDir2}" "`).toString()
+    assert(ret2.includes('File(s) copied'))
     getter.try_powershell_path = Path.join(weirdDir, Path.basename(getter.try_powershell_path))
     getter.compile_run_path = Path.join(weirdDir, Path.basename(getter.compile_run_path))
     getter.try_registry_path = Path.join(weirdDir, Path.basename(getter.try_registry_path))
@@ -222,7 +228,7 @@ describe('Try cmd tools in a weird path', () => {
     const basePath = baseParts.join('\\') + '"'
     Object.assign(getter, {try_powershell_path, compile_run_path, try_registry_path})
     assert(!getter.try_powershell_path.includes(weirdPart))
-    execSync(`"cmd.exe" /s /c rmdir /s /q ${basePath}`)
+    //execSync(`"cmd.exe" /s /c rmdir /s /q ${basePath}`)
   })
 })
 
