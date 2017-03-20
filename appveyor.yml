@@ -57,6 +57,8 @@ install:
 
       set > C:\projects\windows-autoconf\logs\set.log
 
+      npm -g install mocha > nul
+
       npm link
 
       tools\try_powershell.cmd > C:\projects\windows-autoconf\logs\vs-output.json
