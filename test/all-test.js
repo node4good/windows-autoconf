@@ -48,8 +48,8 @@ describe('Try cmd tools', () => {
     })
 
     it('Powershell -Version 2', function () {
-      const csfiles = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\..\\tools*\\*.cs').replace('"', '')
-      const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type (Out-String -InputObject (Get-Content '${csfiles}')); [VisualStudioConfiguration.Program]::Query() }`
+      const csFiles = getter.try_powershell_path.replace(/\\[^\\]+$/, '\\..\\tools*\\*.cs').replace('"', '')
+      const cmd = `"powershell.exe" -Version 2 -NoProfile -ExecutionPolicy Unrestricted -Command "& { Add-Type (Out-String -InputObject (Get-Content '${csFiles}')); [VisualStudioConfiguration.Program]::Query() }`
       let ret
       try {
         ret = getter._forTesting.execAndParse(cmd)
@@ -316,7 +316,7 @@ describe('Try node wrapper', function () {
     try {
       cmd = getter.findOldVcVarsFile(null, 'x64')
     } catch (e) {
-      assert(e.message.includes("No Visual Studio found"))
+      assert(e.message.includes('No Visual Studio found'))
       this.skip()
     }
     const path = extractFile(cmd)
@@ -331,7 +331,7 @@ describe('Try node wrapper', function () {
     try {
       cmd = getter.findOldVcVarsFile(null, 'ia32')
     } catch (e) {
-      assert(e.message.includes("No Visual Studio found"))
+      assert(e.message.includes('No Visual Studio found'))
       this.skip()
     }
     const path = extractFile(cmd)
@@ -362,7 +362,7 @@ describe('Try node wrapper', function () {
     try {
       setup = getter._forTesting.getWithFullCmd('x64')
     } catch (e) {
-      assert(e.message.includes("No Visual Studio found"))
+      assert(e.message.includes('No Visual Studio found'))
       this.skip()
     }
 
@@ -378,7 +378,7 @@ describe('Try node wrapper', function () {
     try {
       setup = getter._forTesting.getWithFullCmd('ia32')
     } catch (e) {
-      assert(e.message.includes("No Visual Studio found"))
+      assert(e.message.includes('No Visual Studio found'))
       this.skip()
     }
 

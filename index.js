@@ -232,13 +232,13 @@ function getMSVSSetup (version) {
   let setup = getVS2017Setup()
   if (version === '2017' || (version === 'auto' && setup && setup.InstallationPath)) {
     setup.version = '2017'
-  } else if (version === '2015' || version === 'auto' && env['VS140COMNTOOLS']) {
+  } else if ((version === '2015' || version === 'auto') && env['VS140COMNTOOLS']) {
     setup = {version: '2015', CommonTools: env['VS140COMNTOOLS']}
-  } else if (version === '2013' || version === 'auto' && env['VS120COMNTOOLS']) {
+  } else if ((version === '2013' || version === 'auto') && env['VS120COMNTOOLS']) {
     setup = {version: '2013', CommonTools: env['VS120COMNTOOLS']}
-  } else if (version === '2012' || version === 'auto' && env['VS110COMNTOOLS']) {
+  } else if ((version === '2012' || version === 'auto') && env['VS110COMNTOOLS']) {
     setup = {version: '2012', CommonTools: env['VS110COMNTOOLS']}
-  } else if (version === '2010' || version === 'auto' && env['VS100COMNTOOLS']) {
+  } else if ((version === '2010' || version === 'auto') && env['VS100COMNTOOLS']) {
     setup = {version: '2010', CommonTools: env['VS100COMNTOOLS']}
   } else {
     setup = {version, InstallationPath: ''}
@@ -336,9 +336,9 @@ function resolveDevEnvironment (targetArch, noCache) {
   const cacheKey = setup.FullCmd.replace(/\s|\\|\/|:|=|"/g, '')
   const env = bindings.process.env
   const cacheDir = bindings.path.join(env.HOME || env.USERPROFILE, '.autoconf')
-  const cachable = setupCache(cacheDir)
+  const canCache = setupCache(cacheDir)
   const cacheName = bindings.path.join(cacheDir, `_${cacheKey}${setup.Version}.json`)
-  if (!noCache && cachable && bindings.fs.existsSync(cacheName)) {
+  if (!noCache && canCache && bindings.fs.existsSync(cacheName)) {
     const file = bindings.fs.readFileSync(cacheName)
     const ret = JSON.parse(file)
     bindings.debug('cache hit')
@@ -346,7 +346,7 @@ function resolveDevEnvironment (targetArch, noCache) {
     return ret
   } else {
     const env = resolveDevEnvironmentInner(setup.FullCmd, targetArch)
-    cachable && bindings.fs.writeFileSync(cacheName, JSON.stringify(env))
+    canCache && bindings.fs.writeFileSync(cacheName, JSON.stringify(env))
     bindings.debug('actual resolution')
     bindings.debugDir(env)
     return env
@@ -370,10 +370,7 @@ module.exports = {
   findOldVcVarsFile: (_, arch) => findVcVarsFile(arch),
   resolveDevEnvironment,
   _forTesting: {
-    get bindings () {
-      if (!bindings._bindings) bindings.inner
-      return bindings
-    },
+    get bindings () { return bindings.inner && bindings },
     tryVS2017Powershell,
     tryVS2017CSC,
     tryVS2017Registry,
