@@ -4,7 +4,9 @@
   "description": "Try to find MS build tools",
   "main": "index.js",
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "mocha": "^3.2.0"
+  },
   "scripts": {
     "test": "mocha test"
   },
