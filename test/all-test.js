@@ -228,7 +228,7 @@ describe('Try cmd tools in a weird path', () => {
     const basePath = baseParts.join('\\') + '"'
     Object.assign(getter, {try_powershell_path, compile_run_path, try_registry_path})
     assert(!getter.try_powershell_path.includes(weirdPart))
-    //execSync(`"cmd.exe" /s /c rmdir /s /q ${basePath}`)
+    execSync(`"cmd.exe" /s /c rmdir /s /q ${basePath}`)
   })
 })
 
@@ -237,8 +237,9 @@ function extractFile (str) {
 }
 
 describe('Try node wrapper', function () {
-  it('getMSVSVersion', () => {
+  it('getMSVSVersion', function () {
     const version = getter.getMSVSVersion()
+    if (version === 'auto') return this.skip()
     console.log(`env#${process.env['GYP_MSVS_VERSION']}#`)
     if ('GYP_MSVS_VERSION' in process.env && !(['auto', ''].includes(process.env['GYP_MSVS_VERSION']))) {
       assert.equal(version, process.env['GYP_MSVS_VERSION'])
@@ -310,8 +311,14 @@ describe('Try node wrapper', function () {
     assert.equal(bits, 64)
   })
 
-  it('findOldVcVarsFile x64', () => {
-    const cmd = getter.findOldVcVarsFile(null, 'x64')
+  it('findOldVcVarsFile x64', function () {
+    let cmd
+    try {
+      cmd = getter.findOldVcVarsFile(null, 'x64')
+    } catch (e) {
+      assert(e.message.includes("No Visual Studio found"))
+      this.skip()
+    }
     const path = extractFile(cmd)
     const parts = path.split('\\')
     assert(parts.length >= 4)
@@ -319,31 +326,19 @@ describe('Try node wrapper', function () {
     assert(fs.existsSync(path))
   })
 
-  it('findOldVcVarsFile ia32', () => {
-    const cmd = getter.findOldVcVarsFile(null, 'ia32')
+  it('findOldVcVarsFile ia32', function () {
+    let cmd
+    try {
+      cmd = getter.findOldVcVarsFile(null, 'ia32')
+    } catch (e) {
+      assert(e.message.includes("No Visual Studio found"))
+      this.skip()
+    }
     const path = extractFile(cmd)
     const parts = path.split('\\')
     assert(parts.length >= 4)
     assert(parts.pop().match(/vs|vars/i))
     assert(fs.existsSync(path))
-  })
-
-  it('getWithFullCmd ia32', () => {
-    const setup = getter._forTesting.getWithFullCmd('ia32')
-    const cmd = setup.CmdPath
-    const parts = cmd.split('\\')
-    assert(parts.length >= 4)
-    assert(parts.pop().match(/vs|vars/i))
-    assert(fs.existsSync(cmd))
-  })
-
-  it('getWithFullCmd x64', () => {
-    const setup = getter._forTesting.getWithFullCmd('x64')
-    const cmd = setup.CmdPath
-    const parts = cmd.split('\\')
-    assert(parts.length >= 4)
-    assert(parts.pop().match(/vs|vars/i))
-    assert(fs.existsSync(cmd))
   })
 
   it('locateMsbuild', () => {
@@ -360,6 +355,38 @@ describe('Try node wrapper', function () {
     assert(parts.length >= 4)
     assert(parts.pop() === 'MSBuild.exe')
     assert(fs.existsSync(msbPath))
+  })
+
+  it('getWithFullCmd x64', function () {
+    let setup
+    try {
+      setup = getter._forTesting.getWithFullCmd('x64')
+    } catch (e) {
+      assert(e.message.includes("No Visual Studio found"))
+      this.skip()
+    }
+
+    const cmd = setup.CmdPath
+    const parts = cmd.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop().match(/vs|vars/i))
+    assert(fs.existsSync(cmd))
+  })
+
+  it('getWithFullCmd ia32', function () {
+    let setup
+    try {
+      setup = getter._forTesting.getWithFullCmd('ia32')
+    } catch (e) {
+      assert(e.message.includes("No Visual Studio found"))
+      this.skip()
+    }
+
+    const cmd = setup.CmdPath
+    const parts = cmd.split('\\')
+    assert(parts.length >= 4)
+    assert(parts.pop().match(/vs|vars/i))
+    assert(fs.existsSync(cmd))
   })
 
   it('locateMsbuild(2017)', function () {
@@ -382,6 +409,11 @@ describe('Try node wrapper', function () {
 })
 
 describe('genEnvironment', function () {
+  before(function () {
+    const version = getter.getMSVSVersion()
+    if (version === 'auto') return this.skip()
+  })
+
   function testEnvGen (arch, noCache) {
     return function () {
       let env
