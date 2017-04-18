@@ -226,7 +226,7 @@ function locateMSBuild2017 () {
 
 function getMSVSSetup (version) {
   if ('cacheSetup' in getMSVSSetup) return getMSVSSetup.cacheSetup
-  const env = bindings.process.env
+  const env = bindings.inner.process.env
   if (!version) { version = env['GYP_MSVS_VERSION'] || 'auto' }
 
   let setup = getVS2017Setup()
